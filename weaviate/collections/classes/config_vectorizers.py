@@ -1,6 +1,6 @@
 import warnings
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from deprecation import deprecated as docstring_deprecated
 from pydantic import AnyHttpUrl, BaseModel, Field, field_validator
@@ -437,18 +437,37 @@ class _Multi2VecBase(_VectorizerConfigCreate):
     textFields: Optional[List[Multi2VecField]]
 
     def _to_dict(self) -> Dict[str, Any]:
+        # Call parent method (most expensive operation per profile)
         ret_dict = super()._to_dict()
-        ret_dict["weights"] = {}
-        for cls_field in type(self).model_fields:
+        weights_dict = {}
+
+        # Cache type(self).model_fields to local variable for efficiency
+        model_fields = type(self).model_fields
+
+        # Only process relevant fields, rather than all fields; avoids getattr+cast on all fields
+        # Since "Fields" is present only in certain field names, preselect them
+        fields_of_interest = [f for f in model_fields if "Fields" in f]
+        for cls_field in fields_of_interest:
             val = getattr(self, cls_field)
-            if "Fields" in cls_field and val is not None:
-                val = cast(List[Multi2VecField], val)
-                ret_dict[cls_field] = [field.name for field in val]
-                weights = [field.weight for field in val if field.weight is not None]
-                if len(weights) > 0:
-                    ret_dict["weights"][cls_field] = weights
-        if len(ret_dict["weights"]) == 0:
-            del ret_dict["weights"]
+            if val is not None:
+                # val is List[Multi2VecField]
+                # Avoid redundant cast (safe only if you know this is how they are defined)
+                # Instead, assume validated input from Pydantic
+                names = []
+                weights = []
+                # Avoid double list comprehensions; process elements in one loop, and minimize attribute lookups
+                for field in val:
+                    names.append(field.name)
+                    weight = field.weight
+                    if weight is not None:
+                        weights.append(weight)
+                ret_dict[cls_field] = names
+                if weights:
+                    weights_dict[cls_field] = weights
+
+        if weights_dict:
+            ret_dict["weights"] = weights_dict
+        # Only set 'weights' key if weights_dict was nonempty
         return ret_dict
 
 
@@ -499,9 +518,12 @@ class _Multi2MultiVecJinaConfig(_Multi2VecBase):
     model: Optional[str]
 
     def _to_dict(self) -> Dict[str, Any]:
+        # Profile shows this call as most time consuming, but it's required for behavioral preservation
         ret_dict = super()._to_dict()
-        if self.baseURL is not None:
-            ret_dict["baseURL"] = self.baseURL.unicode_string()
+        # Avoid attribute lookup unless needed
+        baseURL = self.baseURL
+        if baseURL is not None:
+            ret_dict["baseURL"] = baseURL.unicode_string()
         return ret_dict
 
 
