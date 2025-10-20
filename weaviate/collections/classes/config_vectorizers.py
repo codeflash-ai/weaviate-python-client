@@ -438,17 +438,22 @@ class _Multi2VecBase(_VectorizerConfigCreate):
 
     def _to_dict(self) -> Dict[str, Any]:
         ret_dict = super()._to_dict()
-        ret_dict["weights"] = {}
+        weights = {}
         for cls_field in type(self).model_fields:
             val = getattr(self, cls_field)
             if "Fields" in cls_field and val is not None:
                 val = cast(List[Multi2VecField], val)
-                ret_dict[cls_field] = [field.name for field in val]
-                weights = [field.weight for field in val if field.weight is not None]
-                if len(weights) > 0:
-                    ret_dict["weights"][cls_field] = weights
-        if len(ret_dict["weights"]) == 0:
-            del ret_dict["weights"]
+                names = []
+                field_weights = []
+                for field in val:
+                    names.append(field.name)
+                    if field.weight is not None:
+                        field_weights.append(field.weight)
+                ret_dict[cls_field] = names
+                if field_weights:
+                    weights[cls_field] = field_weights
+        if weights:
+            ret_dict["weights"] = weights
         return ret_dict
 
 
