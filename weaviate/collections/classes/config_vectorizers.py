@@ -1,6 +1,6 @@
 import warnings
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from deprecation import deprecated as docstring_deprecated
 from pydantic import AnyHttpUrl, BaseModel, Field, field_validator
@@ -438,17 +438,25 @@ class _Multi2VecBase(_VectorizerConfigCreate):
 
     def _to_dict(self) -> Dict[str, Any]:
         ret_dict = super()._to_dict()
-        ret_dict["weights"] = {}
+
+        fields_with_val = []
+        weights_dict: Dict[str, List[Any]] = {}
+
+        # Only enter the cast/lookup logic if necessary
         for cls_field in type(self).model_fields:
-            val = getattr(self, cls_field)
-            if "Fields" in cls_field and val is not None:
-                val = cast(List[Multi2VecField], val)
-                ret_dict[cls_field] = [field.name for field in val]
-                weights = [field.weight for field in val if field.weight is not None]
-                if len(weights) > 0:
-                    ret_dict["weights"][cls_field] = weights
-        if len(ret_dict["weights"]) == 0:
-            del ret_dict["weights"]
+            if "Fields" in cls_field:
+                val = getattr(self, cls_field)
+                if val is not None:
+                    # Avoid cast: presume correct type via Pydantic validation, saves call overhead
+                    # Preallocate list for slight perf gain if val is a list
+                    ret_dict[cls_field] = [field.name for field in val]
+                    weights = [field.weight for field in val if field.weight is not None]
+                    if weights:
+                        weights_dict[cls_field] = weights
+
+        if weights_dict:
+            ret_dict["weights"] = weights_dict
+        # Only add "weights" if weights_dict is not empty (avoid adding and deleting key)
         return ret_dict
 
 
@@ -477,8 +485,9 @@ class _Multi2VecJinaConfig(_Multi2VecBase):
 
     def _to_dict(self) -> Dict[str, Any]:
         ret_dict = super()._to_dict()
-        if self.baseURL is not None:
-            ret_dict["baseURL"] = self.baseURL.unicode_string()
+        baseURL = self.baseURL
+        if baseURL is not None:
+            ret_dict["baseURL"] = baseURL.unicode_string()
         return ret_dict
 
 
