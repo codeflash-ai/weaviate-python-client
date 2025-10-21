@@ -578,7 +578,14 @@ def _map_multi2vec_fields(
 ) -> Optional[List[Multi2VecField]]:
     if fields is None:
         return None
-    return [Multi2VecField(name=field) if isinstance(field, str) else field for field in fields]
+    # Preallocate result list for performance; avoids Python list resizing for larger lists.
+    result = [None] * len(fields)
+    for idx, field in enumerate(fields):
+        if isinstance(field, str):
+            result[idx] = Multi2VecField(name=field)
+        else:
+            result[idx] = field
+    return result
 
 
 class _Vectorizer:
