@@ -788,6 +788,12 @@ class _Vectorizer:
         Raises:
             pydantic.ValidationError: If `vectorize_collection_name` is not a `bool`.
         """
+        if vectorize_collection_name is True:
+            if not hasattr(_Vectorizer, "_default_text2vec_contextionary_config"):
+                _Vectorizer._default_text2vec_contextionary_config = _Text2VecContextionaryConfig(
+                    vectorizeClassName=True
+                )
+            return _Vectorizer._default_text2vec_contextionary_config
         return _Text2VecContextionaryConfig(vectorizeClassName=vectorize_collection_name)
 
     @staticmethod
