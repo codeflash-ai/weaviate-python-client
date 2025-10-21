@@ -522,7 +522,7 @@ class _FilterByCount(_FilterBase):
 class _FilterByRef:
     def __init__(self, target: _TargetRefs) -> None:
         self.__target = target
-        self.__last_target = self.__target  # use this to append to the end of the chain
+        self.__last_target = target  # use this to append to the end of the chain
 
     def by_ref(self, link_on: str) -> "_FilterByRef":
         """Filter on the given reference."""
