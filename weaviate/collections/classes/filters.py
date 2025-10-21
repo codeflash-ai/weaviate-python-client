@@ -602,7 +602,7 @@ class Filter:
     @staticmethod
     def by_update_time() -> _FilterByUpdateTime:
         """Define a filter based on the update time to be used when querying and deleting from a collection."""
-        return _FilterByUpdateTime(target=None)
+        return _FilterByUpdateTime()
 
     @staticmethod
     def by_property(name: str, length: bool = False) -> _FilterByProperty:
