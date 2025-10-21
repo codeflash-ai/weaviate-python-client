@@ -457,11 +457,8 @@ def _check_positive_num(
 
 
 def is_weaviate_domain(url: str) -> bool:
-    return (
-        "weaviate.io" in url.lower()
-        or "semi.technology" in url.lower()
-        or "weaviate.cloud" in url.lower()
-    )
+    lowered = url.lower()
+    return "weaviate.io" in lowered or "semi.technology" in lowered or "weaviate.cloud" in lowered
 
 
 def strip_newlines(s: str) -> str:
