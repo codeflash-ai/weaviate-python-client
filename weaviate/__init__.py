@@ -4,6 +4,7 @@ import os
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any
+from weaviate.warnings import _Warnings
 
 try:
     __version__ = version("weaviate-client")
@@ -43,6 +44,33 @@ if not sys.warnoptions:
     simplefilter("default")
 
 from .warnings import _Warnings
+
+deprs_set = set([
+    "Collection",
+    "AuthClientCredentials",
+    "AuthClientPassword",
+    "AuthBearerToken",
+    "AuthApiKey",
+    "BackupStorage",
+    "UnexpectedStatusCodeException",
+    "ObjectAlreadyExistsException",
+    "AuthenticationFailedException",
+    "SchemaValidationException",
+    "WeaviateStartUpError",
+    "ConsistencyLevel",
+    "WeaviateErrorRetryConf",
+    "EmbeddedOptions",
+    "AdditionalConfig",
+    "Config",
+    "ConnectionConfig",
+    "ConnectionParams",
+    "ProtocolParams",
+    "AdditionalProperties",
+    "LinkTo",
+    "Shard",
+    "Tenant",
+    "TenantActivityStatus",
+])
 
 os.environ["GRPC_VERBOSITY"] = "ERROR"  # https://github.com/danielmiessler/fabric/discussions/754
 
@@ -139,7 +167,7 @@ map_ = {
 
 
 def __getattr__(name: str) -> Any:
-    if name in deprs:
+    if name in deprs_set:
         _Warnings.root_module_import(name, map_[name])
         return getattr(sys.modules[f"{__name__}.{map_[name]}"], name)
     raise AttributeError(f"module {__name__} has no attribute {name}")
