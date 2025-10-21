@@ -69,11 +69,12 @@ class _BaseExecutor(Generic[ConnectionType]):
             consistency_level=consistency_level,
             validate_arguments=validate_arguments,
         )
+        self._aggregate_builder_cache: Optional[AggregateBuilder] = None
 
     def _query(self) -> AggregateBuilder:
-        return AggregateBuilder(
-            self._name,
-        )
+        if self._aggregate_builder_cache is None:
+            self._aggregate_builder_cache = AggregateBuilder(self._name)
+        return self._aggregate_builder_cache
 
     def _to_aggregate_result(
         self, response: dict, metrics: Optional[List[_Metrics]]
