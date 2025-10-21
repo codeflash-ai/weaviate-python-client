@@ -174,7 +174,8 @@ class _FilterByProperty(_FilterBase):
     def __init__(self, prop: str, length: bool, target: Optional[_TargetRefs] = None) -> None:
         self._target = target
         if length:
-            prop = "len(" + prop + ")"
+            # Use f-string for slightly faster and more idiomatic string concatenation
+            prop = f"len({prop})"
 
         self._property = prop
 
@@ -198,7 +199,7 @@ class _FilterByProperty(_FilterBase):
 
     def contains_all(self, val: FilterValuesList) -> _Filters:
         """Filter on whether the property contains all of the given values."""
-        if len(val) == 0:
+        if not val:
             raise WeaviateInvalidInputError("Filter contains_all must have at least one value")
 
         return _FilterValue(
