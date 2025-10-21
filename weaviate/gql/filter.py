@@ -764,7 +764,8 @@ def _render_list(input_list: list) -> str:
 
 
 def _render_list_date(input_list: list) -> str:
-    str_list = ",".join('"' + str(item) + '"' for item in input_list)
+    # Use f-string formatting and list comprehension for better performance
+    str_list = ",".join([f'"{item}"' for item in input_list])
     return f"[{str_list}]"
 
 
