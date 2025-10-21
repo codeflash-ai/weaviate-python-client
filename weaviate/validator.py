@@ -28,7 +28,12 @@ def _validate_input(inputs: Union[List[_ValidateArgument], _ValidateArgument]) -
     if isinstance(inputs, _ValidateArgument):
         inputs = [inputs]
     for validate in inputs:
-        if not any(_is_valid(exp, validate.value) for exp in validate.expected):
+        valid = False
+        for exp in validate.expected:
+            if _is_valid(exp, validate.value):
+                valid = True
+                break
+        if not valid:
             raise WeaviateInvalidInputError(
                 f"Argument '{validate.name}' must be one of: {validate.expected}, but got {type(validate.value)}"
             )
