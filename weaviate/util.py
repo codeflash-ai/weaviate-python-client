@@ -184,6 +184,9 @@ def is_weaviate_object_url(url: str) -> bool:
     if len(split) not in (2, 3):
         return False
     if split[0] != "localhost":
+        # Short-circuit on obviously invalid domains first
+        if not split[0] or "." not in split[0]:
+            return False
         if not validators.domain(split[0]):
             return False
     try:
