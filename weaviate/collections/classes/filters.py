@@ -607,7 +607,7 @@ class Filter:
     @staticmethod
     def by_property(name: str, length: bool = False) -> _FilterByProperty:
         """Define a filter based on a property to be used when querying and deleting from a collection."""
-        return _FilterByProperty(prop=name, length=length, target=None)
+        return _FilterByProperty(name, length, None)
 
     @staticmethod
     def all_of(filters: List[_Filters]) -> _Filters:
