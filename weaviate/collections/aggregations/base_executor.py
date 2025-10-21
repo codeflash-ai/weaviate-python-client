@@ -376,13 +376,12 @@ class _BaseExecutor(Generic[ConnectionType]):
         distance: Optional[NUMBER],
         object_limit: Optional[int],
     ) -> None:
-        _validate_input(
-            [
-                _ValidateArgument([int, float, None], "certainty", certainty),
-                _ValidateArgument([int, float, None], "distance", distance),
-                _ValidateArgument([int, None], "object_limit", object_limit),
-            ]
-        )
+        args = [
+            _ValidateArgument([int, float, None], "certainty", certainty),
+            _ValidateArgument([int, float, None], "distance", distance),
+            _ValidateArgument([int, None], "object_limit", object_limit),
+        ]
+        _validate_input(args)
 
     @staticmethod
     def _add_hybrid_to_builder(
@@ -422,7 +421,7 @@ class _BaseExecutor(Generic[ConnectionType]):
         object_limit: Optional[int],
         target_vector: Optional[str],
     ) -> AggregateBuilder:
-        if all([certainty is None, distance is None, object_limit is None]):
+        if certainty is None and distance is None and object_limit is None:
             raise WeaviateInvalidInputError(
                 "You must provide at least one of the following arguments: certainty, distance, object_limit when vector searching"
             )
@@ -430,8 +429,7 @@ class _BaseExecutor(Generic[ConnectionType]):
             _ValidateArgument([str, pathlib.Path, io.BufferedReader], "near_image", near_image)
         )
         _BaseExecutor._parse_near_options(certainty, distance, object_limit)
-        payload: dict = {}
-        payload["image"] = parse_blob(near_image)
+        payload = {"image": parse_blob(near_image)}
         if certainty is not None:
             payload["certainty"] = certainty
         if distance is not None:
