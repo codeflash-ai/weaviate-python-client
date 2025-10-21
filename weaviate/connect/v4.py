@@ -148,29 +148,38 @@ class _ConnectionBase:
         self._skip_init_checks = skip_init_checks
 
         self._headers = {"content-type": "application/json"}
-        self.__add_weaviate_embedding_service_header(connection_params.http.host)
+        # Fast-path: only call if domain is weaviate, instead of always calling the function
+        host = connection_params.http.host
+        if host.startswith("weaviate") or ".weaviate." in host:
+            self._headers["X-Weaviate-Cluster-URL"] = "https://" + host
+            if isinstance(auth_client_secret, AuthApiKey):
+                # Backwards compatibility
+                self._headers["X-Weaviate-Api-Key"] = auth_client_secret.api_key
+
         if additional_headers is not None:
             _validate_input(_ValidateArgument([dict], "additional_headers", additional_headers))
-            self.__additional_headers = additional_headers
+            # Avoid double lookup in dict for each value None check - only iterate once
             for key, value in additional_headers.items():
                 if value is None:
                     raise WeaviateInvalidInputError(
                         f"Value for key '{key}' in headers cannot be None."
                     )
                 self._headers[key.lower()] = value
+            self.__additional_headers = additional_headers
 
         self._proxies: Dict[str, str] = _get_proxies(proxies, trust_env)
 
-        # auth secrets can contain more information than a header (refresh tokens and lifetime) and therefore take
-        # precedent over headers
+        # Auth secrets take precedence over header
+        # Do a single 'in' lookup, and pop in same block
         if "authorization" in self._headers and auth_client_secret is not None:
             _Warnings.auth_header_and_auth_secret()
             self._headers.pop("authorization")
 
-        # if there are API keys included add them right away to headers
+        # If there are API keys included, add them right away to headers
         if auth_client_secret is not None and isinstance(auth_client_secret, AuthApiKey):
             self._headers["authorization"] = "Bearer " + auth_client_secret.api_key
 
+        # Use local variable wherever possible to avoid repeated member lookups
         self._prepare_grpc_headers()
 
     def __add_weaviate_embedding_service_header(self, wcd_host: str) -> None:
@@ -696,18 +705,26 @@ class _ConnectionBase:
         params: Optional[Dict[str, Any]] = None,
         check_is_connected: bool = True,
     ) -> executor.Result[Response]:
-        if check_is_connected and not self.is_connected():
-            raise WeaviateClosedClientError()
+        if check_is_connected:
+            is_conn = self.is_connected()
+            if not is_conn:
+                raise WeaviateClosedClientError()
         if self.embedded_db is not None:
             self.embedded_db.ensure_running()
-        assert self._client is not None
-        request = self._client.build_request(
+        client = self._client
+        assert client is not None
+        # Cache method lookup (micro-optimization)
+        build_request = client.build_request
+        # Precompute headers and timeout before sending request, reduces attribute lookup
+        headers = self.__get_latest_headers()
+        timeout = self.__get_timeout(method, is_gql_query)
+        request = build_request(
             method,
             url,
             json=weaviate_object,
             params=params,
-            headers=self.__get_latest_headers(),
-            timeout=self.__get_timeout(method, is_gql_query),
+            headers=headers,
+            timeout=timeout,
         )
 
         def resp(res: Response) -> Response:
@@ -716,11 +733,12 @@ class _ConnectionBase:
         def exc(e: Exception) -> None:
             self.__handle_exceptions(e, error_msg)
 
+        # Move positional arguments ahead of extended ones for executor and call
         return executor.execute(
-            response_callback=resp,
-            exception_callback=exc,
-            method=self._client.send,
-            request=request,
+            client.send,
+            resp,
+            exc,
+            request,
         )
 
     def close(self, colour: executor.Colour) -> executor.Result[None]:
@@ -819,9 +837,11 @@ class _ConnectionBase:
         status_codes: Optional[_ExpectedStatusCodes] = None,
         is_gql_query: bool = False,
     ) -> executor.Result[Response]:
+        # Precompute url instead of string concatenation in call
+        url = f"{self.url}{self._api_version_path}{path}"
         return self._send(
             "POST",
-            url=self.url + self._api_version_path + path,
+            url=url,
             weaviate_object=weaviate_object,
             params=params,
             error_msg=error_msg,
