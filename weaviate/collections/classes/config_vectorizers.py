@@ -578,7 +578,7 @@ def _map_multi2vec_fields(
 ) -> Optional[List[Multi2VecField]]:
     if fields is None:
         return None
-    return [Multi2VecField(name=field) if isinstance(field, str) else field for field in fields]
+    return list(Multi2VecField(name=field) if isinstance(field, str) else field for field in fields)
 
 
 class _Vectorizer:
