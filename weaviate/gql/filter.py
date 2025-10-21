@@ -759,7 +759,7 @@ def _render_list(input_list: list) -> str:
     Returns:
         The string interpretation of the value in `json` format.
     """
-    str_list = ",".join(str(item) for item in input_list)
+    str_list = ",".join(map(str, input_list))
     return f"[{str_list}]"
 
 
