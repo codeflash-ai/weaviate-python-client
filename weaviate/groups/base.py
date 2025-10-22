@@ -85,13 +85,8 @@ class _BaseExecutor(Generic[ConnectionType]):
     def _get_known_group_names(self, group_type: USER_TYPE) -> executor.Result[List[str]]:
         path = f"/authz/groups/{group_type}"
 
-        def resp(res: Response) -> List[str]:
-            groups = res.json()
-            assert isinstance(groups, list), "Expected a list of group names"
-            return groups
-
         return executor.execute(
-            response_callback=resp,
+            response_callback=_extract_groups,
             method=self._connection.get,
             path=path,
             error_msg=f"Could not get known groups for group type {group_type}",
@@ -183,3 +178,9 @@ class _GroupsOIDCExecutor(Generic[ConnectionType], _BaseExecutor[ConnectionType]
         return self._get_known_group_names(
             USER_TYPE_OIDC,
         )
+
+
+def _extract_groups(res: Response) -> List[str]:
+    groups = res.json()
+    assert isinstance(groups, list), "Expected a list of group names"
+    return groups
