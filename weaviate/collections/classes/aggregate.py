@@ -491,7 +491,7 @@ class Metrics:
         Returns:
             A `_MetricsNumber` object that includes the metrics to be returned.
         """
-        if not any([count, maximum, mean, median, minimum, mode, sum_]):
+        if not (count or maximum or mean or median or minimum or mode or sum_):
             count = True
             maximum = True
             mean = True
