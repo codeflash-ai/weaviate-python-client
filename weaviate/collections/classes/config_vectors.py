@@ -140,21 +140,38 @@ class _IndexWrappers:
         vector_index_config: Optional[_VectorIndexConfigCreate],
         quantizer: Optional[_QuantizerConfigCreate],
     ) -> Optional[_VectorIndexConfigCreate]:
-        if quantizer is not None:
-            if vector_index_config is None:
-                vector_index_config = _IndexWrappers.__hnsw(quantizer=quantizer)
+        # Fast path if quantizer is None; nothing to do
+        if quantizer is None:
+            return vector_index_config
+
+        # Avoid redundant isinstance check
+        if vector_index_config is None:
+            return _IndexWrappers.__hnsw(quantizer=quantizer)
+
+        # Only check isinstance once and branch directly
+        if isinstance(vector_index_config, _VectorIndexConfigDynamicCreate):
+            hnsw = vector_index_config.hnsw
+            flat = vector_index_config.flat
+
+            # Only call __hnsw and __flat if they are None, else assign quantizer directly
+            if hnsw is None:
+                vector_index_config.hnsw = _IndexWrappers.__hnsw(quantizer=quantizer)
             else:
-                if isinstance(vector_index_config, _VectorIndexConfigDynamicCreate):
-                    if vector_index_config.hnsw is None:
-                        vector_index_config.hnsw = _IndexWrappers.__hnsw(quantizer=quantizer)
-                    else:
-                        vector_index_config.hnsw.quantizer = quantizer
-                    if vector_index_config.flat is None:
-                        vector_index_config.flat = _IndexWrappers.__flat(quantizer=quantizer)
-                    else:
-                        vector_index_config.flat.quantizer = quantizer
-                else:
-                    vector_index_config.quantizer = quantizer
+                hnsw_quantizer = hnsw.quantizer
+                # Only assign if quantizer differs
+                if hnsw_quantizer is not quantizer:
+                    hnsw.quantizer = quantizer
+            if flat is None:
+                vector_index_config.flat = _IndexWrappers.__flat(quantizer=quantizer)
+            else:
+                flat_quantizer = flat.quantizer
+                if flat_quantizer is not quantizer:
+                    flat.quantizer = quantizer
+        else:
+            # Only assign if quantizer differs
+            if vector_index_config.quantizer is not quantizer:
+                vector_index_config.quantizer = quantizer
+
         return vector_index_config
 
     @staticmethod
@@ -1484,16 +1501,23 @@ class _Vectors:
 
             truncate: Whether to truncate the input texts to fit within the context length. Defaults to `None`, which uses the server-defined default.
         """
+        # Precompute vectorizer, as all arguments are direct passthrough
+        vectorizer = _Text2VecNvidiaConfig(
+            model=model,
+            vectorizeClassName=vectorize_collection_name,
+            baseURL=base_url,
+            truncate=truncate,
+        )
+
+        # Avoid repeated attribute access
+        vector_index = _IndexWrappers.single(vector_index_config, quantizer)
+
+        # _VectorConfigCreate type is assumed from context
         return _VectorConfigCreate(
             name=name,
             source_properties=source_properties,
-            vectorizer=_Text2VecNvidiaConfig(
-                model=model,
-                vectorizeClassName=vectorize_collection_name,
-                baseURL=base_url,
-                truncate=truncate,
-            ),
-            vector_index_config=_IndexWrappers.single(vector_index_config, quantizer),
+            vectorizer=vectorizer,
+            vector_index_config=vector_index,
         )
 
 
