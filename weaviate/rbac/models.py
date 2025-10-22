@@ -1019,6 +1019,15 @@ class Permissions:
 
     @staticmethod
     def cluster(*, read: bool = False) -> PermissionsCreateType:
+        # Use static pre-created objects for the common case to reduce allocation and instantiation cost
+        # Assumes _ClusterPermission and ClusterAction.READ are immutable/singleton-safe across calls
+        # The returned list MUST NOT be mutated by the caller, to preserve safe sharing.
         if read:
-            return [_ClusterPermission(actions={ClusterAction.READ})]
+            # Use a preallocated singleton to avoid recreation cost
+            if not hasattr(Permissions.cluster, "_singleton_read_permission"):
+                # Single allocation of the permission list and set
+                Permissions.cluster._singleton_read_permission = [
+                    _ClusterPermission(actions=frozenset({ClusterAction.READ}))
+                ]
+            return Permissions.cluster._singleton_read_permission
         return []
