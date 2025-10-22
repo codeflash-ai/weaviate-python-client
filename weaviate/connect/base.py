@@ -46,24 +46,34 @@ class ConnectionParams(BaseModel):
 
     @classmethod
     def from_url(cls, url: str, grpc_port: int, grpc_secure: bool = False) -> "ConnectionParams":
+        # Parse URL just once and re-use parsed components for efficiency
         parsed_url = urlparse(url)
-        if parsed_url.scheme not in ["http", "https"]:
-            raise ValueError(f"Unsupported scheme: {parsed_url.scheme}")
-        if parsed_url.port is None:
-            port = 443 if parsed_url.scheme == "https" else 80
-        else:
-            port = parsed_url.port
+        scheme = parsed_url.scheme
+        hostname = parsed_url.hostname
+        port = parsed_url.port
+
+        if scheme not in ("http", "https"):
+            raise ValueError(f"Unsupported scheme: {scheme}")
+
+        # Avoid extra conditional logic, assign port directly
+        if port is None:
+            port = 443 if scheme == "https" else 80
+
+        # Calculate HTTPS flag only once
+        is_https = scheme == "https"
+        # Use is_https to avoid recomputation in both protocol param constructions
+        host = cast(str, hostname)
 
         return cls(
             http=ProtocolParams(
-                host=cast(str, parsed_url.hostname),
+                host=host,
                 port=port,
-                secure=parsed_url.scheme == "https",
+                secure=is_https,
             ),
             grpc=ProtocolParams(
-                host=cast(str, parsed_url.hostname),
+                host=host,
                 port=grpc_port,
-                secure=grpc_secure or parsed_url.scheme == "https",
+                secure=grpc_secure or is_https,
             ),
         )
 
