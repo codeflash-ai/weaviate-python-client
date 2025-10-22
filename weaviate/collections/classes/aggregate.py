@@ -532,12 +532,8 @@ class Metrics:
         Returns:
             A `_MetricsBoolean` object that includes the metrics to be returned.
         """
-        if not any([count, percentage_false, percentage_true, total_false, total_true]):
-            count = True
-            percentage_false = True
-            percentage_true = True
-            total_false = True
-            total_true = True
+        if not (count or percentage_false or percentage_true or total_false or total_true):
+            count = percentage_false = percentage_true = total_false = total_true = True
         return _MetricsBoolean(
             property_name=self.__property,
             count=count,
