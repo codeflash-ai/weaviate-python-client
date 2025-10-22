@@ -1005,17 +1005,23 @@ class Permissions:
     def backup(
         *, collection: Union[str, Sequence[str]], manage: bool = False
     ) -> PermissionsCreateType:
-        permissions: List[_Permission] = []
+        # Optimize by reducing number of object creations and function calls
         if isinstance(collection, str):
-            collection = [collection]
-        for c in collection:
-            permission = _BackupsPermission(collection=c, actions=set())
+            collection_seq = (collection,)
+        else:
+            collection_seq = collection
 
-            if manage:
-                permission.actions.add(BackupsAction.MANAGE)
-            if len(permission.actions) > 0:
-                permissions.append(permission)
-        return permissions
+        if manage:
+            # Precompute the MANAGE action set and reuse it for all permissions
+            manage_action = {BackupsAction.MANAGE}
+            permissions = [
+                _BackupsPermission(collection=c, actions=manage_action.copy())
+                for c in collection_seq
+            ]
+            return permissions
+        else:
+            # No actions => skip object creation
+            return []
 
     @staticmethod
     def cluster(*, read: bool = False) -> PermissionsCreateType:
