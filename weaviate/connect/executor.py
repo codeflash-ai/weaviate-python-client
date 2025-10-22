@@ -111,11 +111,7 @@ async def aresult(result: Result[T]) -> T:
 
 def return_(value: T, colour: Colour) -> Result[T]:
     if colour == "async":
-
-        async def execute_() -> T:
-            return value
-
-        return execute_()
+        return _execute(value)
     return value
 
 
@@ -187,3 +183,7 @@ def wrap(colour: Colour) -> Callable[[T], T]:
         return cls
 
     return decorator
+
+
+async def _execute(value):
+    return value
