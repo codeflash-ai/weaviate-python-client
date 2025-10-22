@@ -100,7 +100,7 @@ def execute(
 
 
 def result(result: Result[T]) -> T:
-    assert not isinstance(result, Awaitable), f"Expected sync result, got {result}"
+    assert not hasattr(result, "__await__"), f"Expected sync result, got {result}"
     return result
 
 
