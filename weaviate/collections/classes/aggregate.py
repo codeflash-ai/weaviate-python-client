@@ -599,7 +599,7 @@ class Metrics:
         Returns:
             A `_MetricsReference` object that includes the metrics to be returned.
         """
-        if not any([pointing_to]):
+        if not pointing_to:
             pointing_to = True
         return _MetricsReference(
             property_name=self.__property,
