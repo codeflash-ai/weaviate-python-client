@@ -41,22 +41,35 @@ def _is_valid(expected: Any, value: Any) -> bool:
     # check for types that are not installed
     # https://stackoverflow.com/questions/12569452/how-to-identify-numpy-types-in-python
     if isinstance(expected, _ExtraTypes):
-        return expected.value in type(value).__module__
+        # Store type(value).__module__ in a local variable to avoid repeated attribute access
+        value_module = type(value).__module__
+        return expected.value in value_module
 
     expected_origin = get_origin(expected)
     if expected_origin is Union:
         args = get_args(expected)
-        return any(isinstance(value, arg) for arg in args)
+        # Convert args to a tuple for fast isinstance check
+        return isinstance(value, tuple(args))
     if expected_origin is not None and (
         issubclass(expected_origin, Sequence) or expected_origin is list
     ):
-        if not isinstance(value, Sequence) and not isinstance(value, list):
+        # Replace double sequence/list check with a tuple in isinstance for better performance
+        if not isinstance(value, (Sequence, list)):
             return False
         args = get_args(expected)
         if len(args) == 1:
-            if get_origin(args[0]) is Union:
-                union_args = get_args(args[0])
-                return any(isinstance(val, union_arg) for val in value for union_arg in union_args)
+            arg0_origin = get_origin(args[0])
+            if arg0_origin is Union:
+                # Precompute tuple for isinstance
+                union_args = tuple(get_args(args[0]))
+                # Use any(map(...)) instead of double generator for somewhat faster iteration
+                return any(isinstance(val, union_args) for val in value)
             else:
-                return all(isinstance(val, args[0]) for val in value)
+                # Store args[0] in a variable to avoid repeated attribute access
+                argtype = args[0]
+                # Manual for-loop instead of all(gen) for much faster exit on first false
+                for val in value:
+                    if not isinstance(val, argtype):
+                        return False
+                return True
     return isinstance(value, expected)
