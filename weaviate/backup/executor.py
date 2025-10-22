@@ -580,14 +580,16 @@ def _get_and_validate_get_status(
     Raises:
         TypeError: One of the arguments is of a wrong type.
     """
-    if not isinstance(backup_id, str):
+    if type(backup_id) is not str:
         raise TypeError(f"'backup_id' must be of type str. Given type: {type(backup_id)}.")
+
     if isinstance(backend, str):
-        try:
-            backend = BackupStorage(backend.lower())
-        except KeyError:
+        value = backend.lower()
+        # Instead of try/except with class constructor, check membership first to avoid exception cost
+        if value not in STORAGE_NAMES:
             raise ValueError(
                 f"'backend' must have one of these values: {STORAGE_NAMES}. Given value: {backend}."
             )
+        backend = BackupStorage(value)
 
     return (backup_id.lower(), backend)
