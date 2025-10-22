@@ -41,16 +41,20 @@ class _Auth:
         self._credentials: AuthCredentials = credentials
         self.__make_mounts = make_mounts
         self.__colour: executor.Colour = colour
-        config_url = oidc_config["href"]
-        client_id = oidc_config["clientId"]
+
+        # Avoid multiple lookups in dict, fetch all at once
+        config_url = oidc_config.get("href")
+        client_id = oidc_config.get("clientId")
         assert isinstance(config_url, str) and isinstance(client_id, str)
         self._open_id_config_url: str = config_url
         self._client_id: str = client_id
-        self._default_scopes: List[str] = []
-        if "scopes" in oidc_config:
-            default_scopes = oidc_config["scopes"]
-            assert isinstance(default_scopes, list)
-            self._default_scopes = default_scopes
+
+        scopes = oidc_config.get("scopes")
+        if scopes is not None:
+            assert isinstance(scopes, list)
+            self._default_scopes: List[str] = scopes
+        else:
+            self._default_scopes: List[str] = []
 
         self._token_endpoint: Optional[str] = None
         self._oidc_config = oidc_config
