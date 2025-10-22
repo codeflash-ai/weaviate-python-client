@@ -446,14 +446,16 @@ class Metrics:
         Returns:
             A `_MetricsInteger` object that includes the metrics to be returned.
         """
-        if not any([count, maximum, mean, median, minimum, mode, sum_]):
-            count = True
-            maximum = True
-            mean = True
-            median = True
-            minimum = True
-            mode = True
-            sum_ = True
+        if not (count or maximum or mean or median or minimum or mode or sum_):
+            count, maximum, mean, median, minimum, mode, sum_ = (
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+            )
         return _MetricsInteger(
             property_name=self.__property,
             count=count,
