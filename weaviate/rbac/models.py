@@ -721,19 +721,33 @@ class GroupsPermissions:
         read: bool = False,
         assign_and_revoke: bool = False,
     ) -> PermissionsCreateType:
+        # Optimize: Pre-allocate the actions set once if possible, and skip empty permission construction
         permissions: List[_Permission] = []
+        # Convert single str input to tuple to avoid unnecessary list allocation in loop
         if isinstance(group, str):
-            group = [group]
-        for g in group:
-            permission = _GroupsPermission(group=g, group_type="oidc", actions=set())
+            group_iter = (group,)
+        else:
+            group_iter = group
 
-            if read:
-                permission.actions.add(GroupAction.READ)
-            if assign_and_revoke:
-                permission.actions.add(GroupAction.ASSIGN_AND_REVOKE)
+        # Precompute reusable sets to avoid repeated construction
+        if read and assign_and_revoke:
+            actions_template = {GroupAction.READ, GroupAction.ASSIGN_AND_REVOKE}
+        elif read:
+            actions_template = {GroupAction.READ}
+        elif assign_and_revoke:
+            actions_template = {GroupAction.ASSIGN_AND_REVOKE}
+        else:
+            actions_template = None
 
-            if len(permission.actions) > 0:
-                permissions.append(permission)
+        if actions_template is None:
+            # No need to process further if no actions specified
+            return permissions
+
+        # Use list comprehension for higher performance over loop/appends
+        permissions = [
+            _GroupsPermission(group=g, group_type="oidc", actions=actions_template.copy())
+            for g in group_iter
+        ]
 
         return permissions
 
