@@ -129,7 +129,8 @@ class ShardingState:
     @staticmethod
     def _from_weaviate(data: _ReplicationShardingStateResponse):
         ss = data["shardingState"]
+        sr_from_weaviate = ShardReplicas._from_weaviate
         return ShardingState(
             collection=ss["collection"],
-            shards=[ShardReplicas._from_weaviate(shard) for shard in ss["shards"]],
+            shards=[sr_from_weaviate(shard) for shard in ss["shards"]],
         )
