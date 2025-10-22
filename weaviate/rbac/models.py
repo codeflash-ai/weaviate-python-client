@@ -950,22 +950,27 @@ class Permissions:
         scope: Optional[RoleScope] = None,
     ) -> PermissionsCreateType:
         permissions: List[_Permission] = []
+        actions_to_add = []
+        if read:
+            actions_to_add.append(RolesAction.READ)
+        if create:
+            actions_to_add.append(RolesAction.CREATE)
+        if update:
+            actions_to_add.append(RolesAction.UPDATE)
+        if delete:
+            actions_to_add.append(RolesAction.DELETE)
+
+        if not actions_to_add:
+            return permissions
+
         if isinstance(role, str):
             role = [role]
         for r in role:
-            permission = _RolesPermission(role=r, actions=set())
-            if read:
-                permission.actions.add(RolesAction.READ)
-            if create:
-                permission.actions.add(RolesAction.CREATE)
-            if update:
-                permission.actions.add(RolesAction.UPDATE)
-            if delete:
-                permission.actions.add(RolesAction.DELETE)
+            actions_set = set(actions_to_add)
+            permission = _RolesPermission(role=r, actions=actions_set)
             if scope is not None:
                 permission.scope = scope.value
-            if len(permission.actions) > 0:
-                permissions.append(permission)
+            permissions.append(permission)
 
         return permissions
 
