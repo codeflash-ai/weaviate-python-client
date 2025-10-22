@@ -112,10 +112,10 @@ async def aresult(result: Result[T]) -> T:
 def return_(value: T, colour: Colour) -> Result[T]:
     if colour == "async":
 
-        async def execute_() -> T:
+        async def execute_(value: T) -> T:
             return value
 
-        return execute_()
+        return execute_(value)
     return value
 
 
