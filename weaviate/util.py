@@ -1,5 +1,3 @@
-"""Helper functions."""
-
 import base64
 import datetime
 import io
@@ -8,11 +6,14 @@ import os
 import re
 import uuid as uuid_lib
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
 from urllib.parse import quote
 
 import httpx
 import validators
+from line_profiler import profile as codeflash_line_profile
+
+codeflash_line_profile.enable(output_prefix="/tmp/codeflash_nhqxh9uc/baseline_lprof")
 
 from weaviate.exceptions import (
     ResponseCannotBeDecodedError,
@@ -23,6 +24,11 @@ from weaviate.exceptions import (
 )
 from weaviate.types import BLOB_INPUT, NUMBER, TIME, UUIDS
 from weaviate.warnings import _Warnings
+
+"""Helper functions."""
+
+
+_pattern = re.compile(r"v?(\d+)\.(\d+)")
 
 PYPI_PACKAGE_URL = "https://pypi.org/pypi/weaviate-client/json"
 MAXIMUM_MINOR_VERSION_DELTA = 3  # The maximum delta between minor versions of Weaviate Client that will not trigger an upgrade warning.
@@ -76,13 +82,6 @@ def file_encoder_b64(file_or_file_path: Union[str, Path, io.BufferedReader]) -> 
         TypeError: If the argument is of a wrong data type.
     """
 
-    def _chunks(buffer: io.BufferedReader, chunk_size: int) -> Generator[bytes, Any, Any]:
-        while True:
-            data = buffer.read(chunk_size)
-            if not data:
-                break
-            yield data
-
     should_close_file = False
     use_buffering = True
     file = None
@@ -109,9 +108,14 @@ def file_encoder_b64(file_or_file_path: Union[str, Path, io.BufferedReader]) -> 
             )
 
         if use_buffering:
-            encoded: str = ""
-            for chunk in _chunks(file, BYTES_PER_CHUNK):
-                encoded += base64.b64encode(chunk).decode("utf-8")
+            # Gather encoded chunks in a list for efficiency
+            encoded_chunks: list[str] = []
+            while True:
+                chunk = file.read(BYTES_PER_CHUNK)
+                if not chunk:
+                    break
+                encoded_chunks.append(base64.b64encode(chunk).decode("utf-8"))
+            encoded = "".join(encoded_chunks)
         else:
             encoded = base64.b64encode(file.read()).decode("utf-8")
 
@@ -484,6 +488,7 @@ def _sanitize_str(value: str) -> str:
     return f'"{value}"'
 
 
+@codeflash_line_profile
 def parse_version_string(ver_str: str) -> tuple:
     """Parse a version string into a float.
 
@@ -493,15 +498,14 @@ def parse_version_string(ver_str: str) -> tuple:
     Returns:
         The parsed version as a tuple with len(2). (e.g. (1, 18)) Note: Ignores the patch version.
     """
-    if ver_str.count(".") == 0:
+    if "." not in ver_str:
         ver_str = ver_str + ".0"
 
-    pattern = r"v?(\d+)\.(\d+)"
-    match = re.match(pattern, ver_str)
+    match = _pattern.match(ver_str)
 
     if match:
-        ver_tup = tuple(map(int, match.groups()))
-        return ver_tup
+        g1, g2 = match.groups()
+        return (int(g1), int(g2))
     else:
         raise ValueError(
             f"Unable to parse a version from the input string: {ver_str}. Is it in the format '(v)x.y.z' (e.g. 'v1.18.2' or '1.18.0')?"
