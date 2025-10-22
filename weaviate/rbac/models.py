@@ -746,16 +746,21 @@ class NodesPermissions:
         read: bool = False,
     ) -> PermissionsCreateType:
         permissions: List[_Permission] = []
+        # Fast path: avoid repeated isinstance checks in the loop
         if isinstance(collection, str):
-            collection = [collection]
-        for c in collection:
-            permission = _NodesPermission(collection=c, verbosity="verbose", actions=set())
+            collections = [collection]
+        else:
+            collections = collection
 
+        # Fast path: skip empty collection to avoid overhead
+        for c in collections:
             if read:
-                permission.actions.add(NodesAction.READ)
-            if len(permission.actions) > 0:
+                # Only create permissions if there are any actions
+                # Directly build the set and assign
+                permission = _NodesPermission(
+                    collection=c, verbosity="verbose", actions={NodesAction.READ}
+                )
                 permissions.append(permission)
-
         return permissions
 
     @staticmethod
