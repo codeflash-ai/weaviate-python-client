@@ -106,9 +106,7 @@ def __get_vectorizer_config(schema: Dict[str, Any]) -> Optional[_VectorizerConfi
 
 def __is_vectorizer_present(schema: Dict[str, Any]) -> bool:
     # ignore single vectorizer config if named vectors are present
-    if "vectorConfig" in schema:
-        return False
-    return True
+    return "vectorConfig" not in schema
 
 
 def __get_vector_index_type(schema: Dict[str, Any]) -> Optional[VectorIndexType]:
