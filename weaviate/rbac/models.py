@@ -825,20 +825,21 @@ class Permissions:
             tenant = ["*"]
         if isinstance(tenant, str):
             tenant = [tenant]
-        for c in collection:
-            for t in tenant:
-                permission = _DataPermission(collection=c, tenant=t, actions=set())
 
-                if create:
-                    permission.actions.add(DataAction.CREATE)
-                if read:
-                    permission.actions.add(DataAction.READ)
-                if update:
-                    permission.actions.add(DataAction.UPDATE)
-                if delete:
-                    permission.actions.add(DataAction.DELETE)
+        actions = set()
+        if create:
+            actions.add(DataAction.CREATE)
+        if read:
+            actions.add(DataAction.READ)
+        if update:
+            actions.add(DataAction.UPDATE)
+        if delete:
+            actions.add(DataAction.DELETE)
 
-                if len(permission.actions) > 0:
+        if actions:
+            for c in collection:
+                for t in tenant:
+                    permission = _DataPermission(collection=c, tenant=t, actions=set(actions))
                     permissions.append(permission)
         return permissions
 
