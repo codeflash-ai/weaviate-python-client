@@ -44,7 +44,8 @@ from weaviate.collections.classes.config import (
 
 
 def _is_primitive(d_type: str) -> bool:
-    return d_type[0][0].lower() == d_type[0][0]
+    ch = d_type[0][0]
+    return not ch.isupper()
 
 
 def __get_rerank_config(schema: Dict[str, Any]) -> Optional[_RerankerConfig]:
