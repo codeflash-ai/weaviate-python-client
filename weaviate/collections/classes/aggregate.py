@@ -303,11 +303,10 @@ class _MetricsReference(BaseModel):
     pointing_to: bool
 
     def to_gql(self) -> str:
-        body = " ".join(
-            [
-                "pointingTo" if self.pointing_to else "",
-            ]
-        )
+        if self.pointing_to:
+            body = "pointingTo"
+        else:
+            body = ""
         return f"{self.property_name} {{ {body} }}"
 
     def to_grpc(self) -> aggregate_pb2.AggregateRequest.Aggregation:
