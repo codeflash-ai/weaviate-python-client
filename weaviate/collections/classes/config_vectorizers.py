@@ -578,6 +578,13 @@ def _map_multi2vec_fields(
 ) -> Optional[List[Multi2VecField]]:
     if fields is None:
         return None
+    if not fields:
+        return []
+    first = fields[0]
+    if isinstance(first, Multi2VecField):
+        return fields
+    if isinstance(first, str):
+        return [Multi2VecField(name=field) for field in fields]
     return [Multi2VecField(name=field) if isinstance(field, str) else field for field in fields]
 
 
