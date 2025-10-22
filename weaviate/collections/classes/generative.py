@@ -531,12 +531,14 @@ class GenerativeConfig:
             target_variant: The target variant to use. Defaults to `None`, which uses the server-defined default
             temperature: The temperature to use. Defaults to `None`, which uses the server-defined default
         """
+        # Inline the endpoint processing to avoid repeated lookup
+        aws_endpoint = AnyUrl(endpoint) if endpoint is not None else None
         return _GenerativeAWS(
             model=model,
             max_tokens=max_tokens,
             region=region,
             service=service,
-            endpoint=AnyUrl(endpoint) if endpoint is not None else None,
+            endpoint=aws_endpoint,
             target_model=target_model,
             target_variant=target_variant,
             temperature=temperature,
