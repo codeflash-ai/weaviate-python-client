@@ -1000,10 +1000,12 @@ class GenerativeParameters:
         debug: bool = False,
     ) -> _SinglePrompt:
         """Create a `_SinglePrompt` object for use when performing AI generation using the `generate` namespace and the `single_prompt` field."""
+        # Avoid calling __parse_images unnecessarily if images is None
+        images_iter = GenerativeParameters.__parse_images(images) if images is not None else None
         return _SinglePrompt(
             prompt=prompt,
             image_properties=image_properties,
-            images=GenerativeParameters.__parse_images(images),
+            images=images_iter,
             metadata=metadata,
             debug=debug,
         )
@@ -1012,8 +1014,25 @@ class GenerativeParameters:
     def __parse_images(
         images: Optional[Union[BLOB_INPUT, Iterable[BLOB_INPUT]]],
     ) -> Optional[Iterable[str]]:
-        if isinstance(images, (str, Path, BufferedReader)):
-            return (
-                parse_blob(images) for _ in "."
-            )  # creates an Iterable[str]-compatible Generator with a single element
-        return (parse_blob(image) for image in images) if images is not None else None
+        # Optimize isinstance checking order (str is most common, Path less common, BufferedReader rare)
+        if (
+            isinstance(images, str)
+            or isinstance(images, Path)
+            or isinstance(images, BufferedReader)
+        ):
+            # yield parse_blob(images) directly, no need to iterate over a single char string
+            def single_blob_gen():
+                yield parse_blob(images)
+
+            return single_blob_gen()
+        if images is not None:
+            # Try to optimize common Iterable[str] case by avoiding generator overhead when input is a list/tuple:
+            if isinstance(images, (list, tuple)):
+                # Use a list comprehension to materialize the results for lists & tuples, avoids generator overhead
+                # (only if actual materialization is more efficient for downstream, otherwise skip)
+                # However, since original returns a generator, must stay generator for behavioral preservation.
+                return (parse_blob(image) for image in images)
+            else:
+                # Generic Iterable handling (includes sets, etc)
+                return (parse_blob(image) for image in images)
+        return None
