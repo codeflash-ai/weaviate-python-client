@@ -181,19 +181,23 @@ def _get_proxies(proxies: Union[dict, str, Proxies, None], trust_env: bool) -> D
     if not trust_env:
         return {}
 
-    http_proxy = (os.environ.get("HTTP_PROXY"), os.environ.get("http_proxy"))
-    https_proxy = (os.environ.get("HTTPS_PROXY"), os.environ.get("https_proxy"))
-    grpc_proxy = (os.environ.get("GRPC_PROXY"), os.environ.get("grpc_proxy"))
+    # Use local variables to minimize attribute lookups and merge key logic
+    env = os.environ
 
-    if not any(http_proxy + https_proxy + grpc_proxy):
+    http = env.get("HTTP_PROXY") or env.get("http_proxy")
+    https = env.get("HTTPS_PROXY") or env.get("https_proxy")
+    grpc = env.get("GRPC_PROXY") or env.get("grpc_proxy")
+
+    # Fast path: if all are None, skip creating dict
+    if not (http or https or grpc):
         return {}
 
-    proxies = {}
-    if any(http_proxy):
-        proxies["http"] = http_proxy[0] if http_proxy[0] else http_proxy[1]
-    if any(https_proxy):
-        proxies["https"] = https_proxy[0] if https_proxy[0] else https_proxy[1]
-    if any(grpc_proxy):
-        proxies["grpc"] = grpc_proxy[0] if grpc_proxy[0] else grpc_proxy[1]
+    proxies: Dict[str, str] = {}
+    if http:
+        proxies["http"] = http
+    if https:
+        proxies["https"] = https
+    if grpc:
+        proxies["grpc"] = grpc
 
     return proxies
