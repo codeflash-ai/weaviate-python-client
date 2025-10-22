@@ -157,32 +157,34 @@ def __get_quantizer_config(
 
 
 def __get_multivector_encoding(config: Dict[str, Any]) -> Optional[_MuveraConfig]:
-    return (
-        None
-        if config.get("muvera") is None
-        or not config.get("muvera", {"enabled": False}).get("enabled")
-        else _MuveraConfig(
-            enabled=config["muvera"]["enabled"],
-            ksim=config["muvera"]["ksim"],
-            dprojections=config["muvera"]["dprojections"],
-            repetitions=config["muvera"]["repetitions"],
-        )
+    # Single lookup, and then use local variable to avoid repeated .get and key access
+    muvera_cfg = config.get("muvera")
+    if muvera_cfg is None or not muvera_cfg.get("enabled"):
+        return None
+
+    # Direct attribute access instead of repeated .get
+    # (assuming the contract is that if "enabled" is present, other fields are present)
+    return _MuveraConfig(
+        enabled=muvera_cfg["enabled"],
+        ksim=muvera_cfg["ksim"],
+        dprojections=muvera_cfg["dprojections"],
+        repetitions=muvera_cfg["repetitions"],
     )
 
 
 def __get_multivector(config: Dict[str, Any]) -> Optional[_MultiVectorConfig]:
-    return (
-        None
-        if config.get("multivector") is None
-        or not config.get("multivector", {"enabled": False}).get("enabled")
-        else _MultiVectorConfig(
-            encoding=(
-                None
-                if config["multivector"].get("muvera") is None
-                else __get_multivector_encoding(config["multivector"])
-            ),
-            aggregation=config["multivector"]["aggregation"],
-        )
+    multivector_cfg = config.get("multivector")
+    if multivector_cfg is None or not multivector_cfg.get("enabled"):
+        return None
+
+    # Avoid repeated get: Access muvera_cfg once for encoding extraction
+    muvera_cfg = multivector_cfg.get("muvera")
+    encoding = None if muvera_cfg is None else __get_multivector_encoding(multivector_cfg)
+
+    # Access aggregation directly, as we already know multivector_cfg is not None
+    return _MultiVectorConfig(
+        encoding=encoding,
+        aggregation=multivector_cfg["aggregation"],
     )
 
 
