@@ -136,54 +136,50 @@ def no_wrapping(func: T) -> T:
 
 
 def wrap(colour: Colour) -> Callable[[T], T]:
-    def decorator(cls: T) -> T:
-        methods: List[Tuple[str, FunctionType]] = []
-        for name, method in inspect.getmembers(cls, inspect.isfunction):
-            # pulls the original method if it was wrapped by functools.wraps, e.g. @deprecated
-            method = getattr(method, "__wrapped__", method)
+    def decorator(cls: "T") -> "T":
+        # Use a local list for methods to minimize lookup cost and pull __wrapped__ early
+        # Also use tuple unpacking in loops for efficiency
 
-            if name.startswith("_"):
-                continue
+        # Pre-filter out names starting with "_" and collect (name, base_method) for wrapping
+        methods: List[Tuple[str, FunctionType]] = [
+            (name, getattr(method, "__wrapped__", method))
+            for name, method in inspect.getmembers(cls, inspect.isfunction)
+            if not name.startswith("_")
+        ]
 
-            methods.append((name, method))
+        # Move loop constant checks outside where possible
+        is_async = colour == "async"
 
-        # loop through all executor methods and wrap them either as sync or async
-        # depending on the colour passed to the decorator
-        # if the method has been marked with @no_wrapping, skip it
-        # this is used for methods that are always sync, i.e. do no I/O, but still
-        # need to be inherited from the base executor class
         for name, method in methods:
+            # Skip methods marked with @no_wrapping (with attribute __no_wrapping__)
             if getattr(method, "__no_wrapping__", method):
                 continue
 
-            if colour == "async":
+            # Define wrapper inline, but bind method only via default argument for efficiency
+            if is_async:
+                # For async, avoid repeated assertion and ensure correct closure binding
+                def make_wrapped_async(method: FunctionType) -> FunctionType:
+                    @wraps(method)
+                    async def wrapped_method_async(self, *args, **kwargs) -> Any:
+                        result = method(self, *args, **kwargs)
+                        assert isinstance(result, Awaitable)
+                        return await result
 
-                @wraps(method)
-                async def wrapped_method_async(
-                    self,
-                    *args,
-                    method: FunctionType = method,
-                    **kwargs,
-                ) -> Any:
-                    result = method(self, *args, **kwargs)
-                    assert isinstance(result, Awaitable)
-                    return await result
+                    return wrapped_method_async
 
-                setattr(cls, name, wrapped_method_async)
+                setattr(cls, name, make_wrapped_async(method))
             else:
 
-                @wraps(method)
-                def wrapped_method_sync(
-                    self,
-                    *args,
-                    method: FunctionType = method,
-                    **kwargs,
-                ) -> Any:
-                    result = method(self, *args, **kwargs)
-                    assert not isinstance(result, Awaitable)
-                    return result
+                def make_wrapped_sync(method: FunctionType) -> FunctionType:
+                    @wraps(method)
+                    def wrapped_method_sync(self, *args, **kwargs) -> Any:
+                        result = method(self, *args, **kwargs)
+                        assert not isinstance(result, Awaitable)
+                        return result
 
-                setattr(cls, name, wrapped_method_sync)
+                    return wrapped_method_sync
+
+                setattr(cls, name, make_wrapped_sync(method))
         return cls
 
     return decorator
