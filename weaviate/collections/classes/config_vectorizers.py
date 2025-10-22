@@ -10,6 +10,7 @@ from typing_extensions import deprecated as typing_deprecated
 from weaviate.collections.classes.config_base import _ConfigCreateModel, _EnumLikeStr
 
 from ...warnings import _Warnings
+from functools import lru_cache
 
 # See https://docs.cohere.com/docs/cohere-embed for reference
 CohereModel: TypeAlias = Literal[
@@ -578,7 +579,16 @@ def _map_multi2vec_fields(
 ) -> Optional[List[Multi2VecField]]:
     if fields is None:
         return None
+    # Speed up for common case where all fields are str and list is non-mutating by tuple conversion and LRU cache
+    if isinstance(fields, list) and fields and all(isinstance(field, str) for field in fields):
+        # Convert to tuple to make hashable and safe for caching
+        return _cached_map_multi2vec_fields(tuple(fields))
     return [Multi2VecField(name=field) if isinstance(field, str) else field for field in fields]
+
+
+@lru_cache(maxsize=128)
+def _cached_map_multi2vec_fields(fields: tuple[str, ...]) -> List["Multi2VecField"]:
+    return [Multi2VecField(name=field) for field in fields]
 
 
 class _Vectorizer:
