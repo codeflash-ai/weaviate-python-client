@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union, overload
+from typing import Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypeVar, deprecated
+from typing_extensions import TypeVar
 
 from weaviate.collections.classes.types import GeoCoordinate, _WeaviateInput
 from weaviate.proto.v1 import aggregate_pb2
@@ -356,25 +356,48 @@ class Metrics:
     def __init__(self, property_: str) -> None:
         self.__property = property_
 
-    @overload
     def text(
         self,
         count: bool = False,
         top_occurrences_count: bool = False,
         top_occurrences_value: bool = False,
         limit: Optional[int] = None,
-    ) -> _MetricsText: ...
+    ) -> _MetricsText:
+        """Define the metrics to be returned for a TEXT or TEXT_ARRAY property when aggregating over a collection.
 
-    @overload
-    @deprecated("The `min_occurrences` argument is deprecated. Use `limit` instead.")
-    def text(
-        self,
-        count: bool = False,
-        top_occurrences_count: bool = False,
-        top_occurrences_value: bool = False,
-        limit: Optional[int] = None,
-        min_occurrences: Optional[int] = None,
-    ) -> _MetricsText: ...
+        If none of the arguments are provided then all metrics will be returned.
+
+        Args:
+            count: Whether to include the number of objects that contain this property.
+            top_occurrences_count: Whether to include the number of the top occurrences of a property's value.
+            top_occurrences_value: Whether to include the value of the top occurrences of a property's value.
+            min_occurrences: (Deprecated) The maximum number of top occurrences to return. Use `limit` instead.
+            limit: The maximum number of top occurrences to return.
+
+        Returns:
+            A `_MetricsStr` object that includes the metrics to be returned.
+        """
+        if limit is not None and min_occurrences is not None:
+            raise ValueError(
+                "You cannot use both `limit` and `min_occurrences` at the same time. Use `limit` instead."
+            )
+
+        if min_occurrences is not None:
+            _Warnings.min_occurrences_metric_deprecated()
+
+        effective_limit = limit if limit is not None else min_occurrences
+
+        if not (count or top_occurrences_count or top_occurrences_value):
+            count = True
+            top_occurrences_count = True
+            top_occurrences_value = True
+        return _MetricsText(
+            property_name=self.__property,
+            count=count,
+            top_occurrences_count=top_occurrences_count,
+            top_occurrences_value=top_occurrences_value,
+            limit=effective_limit,
+        )
 
     def text(
         self,
@@ -408,7 +431,51 @@ class Metrics:
 
         effective_limit = limit if limit is not None else min_occurrences
 
-        if not any([count, top_occurrences_count, top_occurrences_value]):
+        if not (count or top_occurrences_count or top_occurrences_value):
+            count = True
+            top_occurrences_count = True
+            top_occurrences_value = True
+        return _MetricsText(
+            property_name=self.__property,
+            count=count,
+            top_occurrences_count=top_occurrences_count,
+            top_occurrences_value=top_occurrences_value,
+            limit=effective_limit,
+        )
+
+    def text(
+        self,
+        count: bool = False,
+        top_occurrences_count: bool = False,
+        top_occurrences_value: bool = False,
+        limit: Optional[int] = None,
+        min_occurrences: Optional[int] = None,
+    ) -> _MetricsText:
+        """Define the metrics to be returned for a TEXT or TEXT_ARRAY property when aggregating over a collection.
+
+        If none of the arguments are provided then all metrics will be returned.
+
+        Args:
+            count: Whether to include the number of objects that contain this property.
+            top_occurrences_count: Whether to include the number of the top occurrences of a property's value.
+            top_occurrences_value: Whether to include the value of the top occurrences of a property's value.
+            min_occurrences: (Deprecated) The maximum number of top occurrences to return. Use `limit` instead.
+            limit: The maximum number of top occurrences to return.
+
+        Returns:
+            A `_MetricsStr` object that includes the metrics to be returned.
+        """
+        if limit is not None and min_occurrences is not None:
+            raise ValueError(
+                "You cannot use both `limit` and `min_occurrences` at the same time. Use `limit` instead."
+            )
+
+        if min_occurrences is not None:
+            _Warnings.min_occurrences_metric_deprecated()
+
+        effective_limit = limit if limit is not None else min_occurrences
+
+        if not (count or top_occurrences_count or top_occurrences_value):
             count = True
             top_occurrences_count = True
             top_occurrences_value = True
