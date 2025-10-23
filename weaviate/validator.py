@@ -25,8 +25,35 @@ def _validate_input(inputs: Union[List[_ValidateArgument], _ValidateArgument]) -
     It is not completely robust so be careful supplying subscripted generics in expected as it may not function as expected.
     To avoid this, only supply simply generics like Sequence[...] and List[...] as seen below in __is_valid.
     """
+    # Optimize for single _ValidateArgument with [str] expected (hot path)
     if isinstance(inputs, _ValidateArgument):
+        validate = inputs
+        if (
+            isinstance(validate.expected, list)
+            and len(validate.expected) == 1
+            and validate.expected[0] is str
+        ):
+            if not isinstance(validate.value, str):
+                raise WeaviateInvalidInputError(
+                    f"Argument '{validate.name}' must be one of: {validate.expected}, but got {type(validate.value)}"
+                )
+            return
         inputs = [inputs]
+    # Optimize hot-path of all [str] expected
+    if isinstance(inputs, list) and all(
+        isinstance(validate, _ValidateArgument)
+        and isinstance(validate.expected, list)
+        and len(validate.expected) == 1
+        and validate.expected[0] is str
+        for validate in inputs
+    ):
+        for validate in inputs:
+            if not isinstance(validate.value, str):
+                raise WeaviateInvalidInputError(
+                    f"Argument '{validate.name}' must be one of: {validate.expected}, but got {type(validate.value)}"
+                )
+        return
+
     for validate in inputs:
         if not any(_is_valid(exp, validate.value) for exp in validate.expected):
             raise WeaviateInvalidInputError(
