@@ -188,53 +188,77 @@ def __get_multivector(config: Dict[str, Any]) -> Optional[_MultiVectorConfig]:
 
 def __get_hnsw_config(config: Dict[str, Any]) -> _VectorIndexConfigHNSW:
     quantizer = __get_quantizer_config(config)
+    # Store config lookups in locals to avoid repeated dict access
+    get = config.get
+    # Use tuple assignment to reduce load time for attribute access
+    cleanup_interval_seconds = config["cleanupIntervalSeconds"]
+    distance_metric = VectorDistances(get("distance"))
+    dynamic_ef_min = config["dynamicEfMin"]
+    dynamic_ef_max = config["dynamicEfMax"]
+    dynamic_ef_factor = config["dynamicEfFactor"]
+    ef = config["ef"]
+    ef_construction = config["efConstruction"]
+    filter_strategy = (
+        VectorFilterStrategy(config["filterStrategy"])
+        if "filterStrategy" in config
+        else VectorFilterStrategy.SWEEPING
+    )
+    flat_search_cutoff = config["flatSearchCutoff"]
+    max_connections = config["maxConnections"]
+    skip = config["skip"]
+    vector_cache_max_objects = config["vectorCacheMaxObjects"]
+    multi_vector = __get_multivector(config)
     return _VectorIndexConfigHNSW(
-        cleanup_interval_seconds=config["cleanupIntervalSeconds"],
-        distance_metric=VectorDistances(config.get("distance")),
-        dynamic_ef_min=config["dynamicEfMin"],
-        dynamic_ef_max=config["dynamicEfMax"],
-        dynamic_ef_factor=config["dynamicEfFactor"],
-        ef=config["ef"],
-        ef_construction=config["efConstruction"],
-        filter_strategy=(
-            VectorFilterStrategy(config["filterStrategy"])
-            if "filterStrategy" in config
-            else VectorFilterStrategy.SWEEPING
-        ),
-        flat_search_cutoff=config["flatSearchCutoff"],
-        max_connections=config["maxConnections"],
+        cleanup_interval_seconds=cleanup_interval_seconds,
+        distance_metric=distance_metric,
+        dynamic_ef_min=dynamic_ef_min,
+        dynamic_ef_max=dynamic_ef_max,
+        dynamic_ef_factor=dynamic_ef_factor,
+        ef=ef,
+        ef_construction=ef_construction,
+        filter_strategy=filter_strategy,
+        flat_search_cutoff=flat_search_cutoff,
+        max_connections=max_connections,
         quantizer=quantizer,
-        skip=config["skip"],
-        vector_cache_max_objects=config["vectorCacheMaxObjects"],
-        multi_vector=__get_multivector(config),
+        skip=skip,
+        vector_cache_max_objects=vector_cache_max_objects,
+        multi_vector=multi_vector,
     )
 
 
 def __get_flat_config(config: Dict[str, Any]) -> _VectorIndexConfigFlat:
     quantizer = __get_quantizer_config(config)
+    # Preload config lookups to minimize repeated dict access
+    distance_metric = VectorDistances(config["distance"])
+    vector_cache_max_objects = config["vectorCacheMaxObjects"]
+    multi_vector = __get_multivector(config)
     return _VectorIndexConfigFlat(
-        distance_metric=VectorDistances(config["distance"]),
+        distance_metric=distance_metric,
         quantizer=quantizer,
-        vector_cache_max_objects=config["vectorCacheMaxObjects"],
-        multi_vector=__get_multivector(config),
+        vector_cache_max_objects=vector_cache_max_objects,
+        multi_vector=multi_vector,
     )
 
 
 def __get_vector_index_config(
     schema: Dict[str, Any],
 ) -> Union[_VectorIndexConfigHNSW, _VectorIndexConfigFlat, _VectorIndexConfigDynamic, None]:
-    if "vectorIndexConfig" not in schema:
+    vector_index_config = schema.get("vectorIndexConfig")
+    vector_index_type = schema.get("vectorIndexType")
+    if vector_index_config is None:
         return None
-    if schema["vectorIndexType"] == "hnsw":
-        return __get_hnsw_config(schema["vectorIndexConfig"])
-    elif schema["vectorIndexType"] == "flat":
-        return __get_flat_config(schema["vectorIndexConfig"])
-    elif schema["vectorIndexType"] == "dynamic":
+    if vector_index_type == "hnsw":
+        return __get_hnsw_config(vector_index_config)
+    elif vector_index_type == "flat":
+        return __get_flat_config(vector_index_config)
+    elif vector_index_type == "dynamic":
+        # Preload nested configs to reduce repeated dict access
+        vic = vector_index_config
         return _VectorIndexConfigDynamic(
-            distance_metric=VectorDistances(schema["vectorIndexConfig"]["distance"]),
-            threshold=schema["vectorIndexConfig"].get("threshold"),
-            hnsw=__get_hnsw_config(schema["vectorIndexConfig"]["hnsw"]),
-            flat=__get_flat_config(schema["vectorIndexConfig"]["flat"]),
+            distance_metric=VectorDistances(vic["distance"]),
+            threshold=vic.get("threshold"),
+            hnsw=__get_hnsw_config(vic["hnsw"]),
+            flat=__get_flat_config(vic["flat"]),
         )
     else:
         return None
