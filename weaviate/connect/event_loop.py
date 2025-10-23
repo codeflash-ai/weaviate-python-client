@@ -69,16 +69,15 @@ class _EventLoop:
     def __start_new_event_loop() -> asyncio.AbstractEventLoop:
         loop = asyncio.new_event_loop()
 
-        event_loop = threading.Thread(
+        threading.Thread(
             target=_EventLoop.__run_event_loop,
             daemon=True,
             args=(loop,),
             name="eventLoop",
-        )
-        event_loop.start()
+        ).start()
 
         while not loop.is_running():
-            time.sleep(0.01)
+            time.sleep(0.001)
 
         return loop
 
@@ -99,13 +98,13 @@ class _EventLoop:
         """
 
         def exception_handler(loop: asyncio.AbstractEventLoop, context: Dict[str, Any]) -> None:
-            if "exception" in context:
-                if type(
-                    context["exception"]
-                ).__name__ == "BlockingIOError" and "Resource temporarily unavailable" in str(
-                    context["exception"]
-                ):
-                    return
+            exc = context.get("exception")
+            if (
+                exc is not None
+                and type(exc).__name__ == "BlockingIOError"
+                and "Resource temporarily unavailable" in str(exc)
+            ):
+                return
             loop.default_exception_handler(context)
 
         loop.set_exception_handler(exception_handler)
