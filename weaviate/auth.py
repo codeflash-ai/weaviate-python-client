@@ -103,11 +103,11 @@ class Auth:
     def bearer_token(
         access_token: str, expires_in: int = 60, refresh_token: Optional[str] = None
     ) -> _BearerToken:
-        return _BearerToken(
-            access_token=access_token,
-            expires_in=expires_in,
-            refresh_token=refresh_token,
-        )
+        obj = _BearerToken.__new__(_BearerToken)
+        obj.access_token = access_token
+        obj.expires_in = expires_in
+        obj.refresh_token = refresh_token
+        return obj
 
 
 OidcAuth = Union[_BearerToken, _ClientPassword, _ClientCredentials]
