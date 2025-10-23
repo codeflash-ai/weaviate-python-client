@@ -765,7 +765,8 @@ class _Pack:
     @staticmethod
     def single(vector: OneDimensionalVectorType) -> bytes:
         vector_list = _get_vector_v4(vector)
-        return struct.pack("{}f".format(len(vector_list)), *vector_list)
+        vector_len = len(vector_list)
+        return struct.pack(f"{vector_len}f", *vector_list)
 
     @staticmethod
     def multi(vector: TwoDimensionalVectorType) -> bytes:
