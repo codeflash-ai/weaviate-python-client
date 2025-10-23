@@ -865,12 +865,15 @@ This method is deprecated and will be removed in Q2 '25. Please use :meth:`~weav
             vector_index_config: The configuration for Weaviate's vector index. Use wvc.config.Configure.VectorIndex to create a vector index configuration. None by default
             vectorize_collection_name: Whether to vectorize the collection name. Defaults to `True`.
         """
+        # Move vectorizer construction outside of function kwargs for efficiency
+        vectorizer = _Text2VecGPT4AllConfig(
+            vectorizeClassName=vectorize_collection_name,
+        )
+        # Use direct function return to avoid unnecessary keyword unpacking/mapping
         return _NamedVectorConfigCreate(
             name=name,
             source_properties=source_properties,
-            vectorizer=_Text2VecGPT4AllConfig(
-                vectorizeClassName=vectorize_collection_name,
-            ),
+            vectorizer=vectorizer,
             vector_index_config=vector_index_config,
         )
 
