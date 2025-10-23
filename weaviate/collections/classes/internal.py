@@ -406,11 +406,12 @@ class _GroupBy:
         self.objects_per_group = objects_per_group
 
     def to_grpc(self) -> search_get_pb2.GroupBy:
-        return search_get_pb2.GroupBy(
-            path=[self.prop],
-            number_of_groups=self.number_of_groups,
-            objects_per_group=self.objects_per_group,
-        )
+        # Avoid unnecessary list creation if prop is already a string and is always used as a single string in a list
+        grp = search_get_pb2.GroupBy()
+        grp.path.append(self.prop)
+        grp.number_of_groups = self.number_of_groups
+        grp.objects_per_group = self.objects_per_group
+        return grp
 
     @classmethod
     def from_input(cls, group_by: Optional[GroupBy]) -> Optional["_GroupBy"]:
