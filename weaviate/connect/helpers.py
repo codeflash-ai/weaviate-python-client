@@ -23,7 +23,10 @@ from weaviate.warnings import _Warnings
 
 
 def __parse_weaviate_cloud_cluster_url(cluster_url: str) -> Tuple[str, str]:
-    _validate_input(_ValidateArgument([str], "cluster_url", cluster_url))
+    if type(cluster_url) is str:
+        pass
+    else:
+        _validate_input(_ValidateArgument([str], "cluster_url", cluster_url))
     if cluster_url.startswith("http"):
         # Handle the common case of copy/pasting a URL instead of the hostname.
         cluster_url = urlparse(cluster_url).netloc
@@ -36,7 +39,7 @@ def __parse_weaviate_cloud_cluster_url(cluster_url: str) -> Tuple[str, str]:
 
 
 def __parse_auth_credentials(creds: Union[str, AuthCredentials, None]) -> Optional[AuthCredentials]:
-    if isinstance(creds, str):
+    if type(creds) is str:
         # If the credentials are a string, assume it's an API key.
         return Auth.api_key(creds)
     elif isinstance(
