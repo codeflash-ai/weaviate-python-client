@@ -132,7 +132,10 @@ class _VectorIndexConfigFlatCreate(_VectorIndexConfigCreate):
 
     @staticmethod
     def vector_index_type() -> VectorIndexType:
-        return VectorIndexType.FLAT
+        # Use a cached class-level constant to avoid repeatedly looking up the class attribute
+        if not hasattr(_VectorIndexConfigFlatCreate, "_VECTOR_INDEX_TYPE_FLAT"):
+            _VectorIndexConfigFlatCreate._VECTOR_INDEX_TYPE_FLAT = VectorIndexType.FLAT
+        return _VectorIndexConfigFlatCreate._VECTOR_INDEX_TYPE_FLAT
 
 
 class _VectorIndexConfigHNSWUpdate(_VectorIndexConfigUpdate):
@@ -236,10 +239,12 @@ class _PQEncoderConfigUpdate(_ConfigUpdateModel):
 
         Errors shadowing type occur if we want to use type as a field name.
         """
-        if self.type_ is not None:
-            schema["type"] = str(self.type_.value)
-        if self.distribution is not None:
-            schema["distribution"] = str(self.distribution.value)
+        type_ = self.type_
+        distribution = self.distribution
+        if type_ is not None:
+            schema["type"] = str(type_.value)
+        if distribution is not None:
+            schema["distribution"] = str(distribution.value)
         return schema
 
 
