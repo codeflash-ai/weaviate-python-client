@@ -729,9 +729,8 @@ class _ByteOps:
 
     @staticmethod
     def decode_float64s(byte_vector: bytes) -> List[float]:
-        return [
-            float(val) for val in struct.unpack(f"{len(byte_vector) // UINT64_LEN}d", byte_vector)
-        ]
+        # Use list unpacking directly; struct.unpack already returns floats
+        return list(struct.unpack(f"{len(byte_vector) // UINT64_LEN}d", byte_vector))
 
     @staticmethod
     def decode_int64s(byte_vector: bytes) -> List[int]:
