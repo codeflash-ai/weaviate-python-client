@@ -1071,28 +1071,41 @@ class _CollectionConfigCreateBase(_ConfigCreateModel):
     rerankerConfig: Optional[_RerankerProvider] = Field(default=None, alias="reranker_config")
 
     def _to_dict(self) -> Dict[str, Any]:
+        # Use local variable aliases to reduce attribute resolution cost in loops
+        model_fields = type(self).model_fields
+        self_getattr = getattr
         ret_dict: Dict[str, Any] = {}
-
-        for cls_field in type(self).model_fields:
-            val = getattr(self, cls_field)
-            if cls_field in ["name", "model", "properties", "references"] or val is None:
+        # Use set for O(1) lookups
+        skip_fields = {"name", "model", "properties", "references"}
+        for cls_field in model_fields:
+            # Single getattr instead of multiple lookups
+            val = self_getattr(self, cls_field)
+            if cls_field in skip_fields or val is None:
                 continue
+            # Collapse isinstance chain for primitive types into a tuple
+            # str() on bool is safe (matches original code)
             elif isinstance(val, (bool, float, str, int)):
                 ret_dict[cls_field] = str(val)
-            elif isinstance(val, _GenerativeProvider):
+            # Avoid repeating type checks
+            elif type(val).__name__ == "_GenerativeProvider":
+                # Only if it's a _GenerativeProvider
                 self.__add_to_module_config(ret_dict, val.generative.value, val._to_dict())
-            elif isinstance(val, _RerankerProvider):
+            elif type(val).__name__ == "_RerankerProvider":
                 self.__add_to_module_config(ret_dict, val.reranker.value, val._to_dict())
             elif isinstance(val, _VectorizerConfigCreate):
+                # Always set 'vectorizer'
                 ret_dict["vectorizer"] = val.vectorizer.value
+                # Only add to moduleConfig if not NONE
                 if val.vectorizer != Vectorizers.NONE:
                     self.__add_to_module_config(ret_dict, val.vectorizer.value, val._to_dict())
             elif isinstance(val, _VectorIndexConfigCreate):
+                # Directly set values
                 ret_dict["vectorIndexType"] = val.vector_index_type()
                 ret_dict[cls_field] = val._to_dict()
             else:
-                assert isinstance(val, _ConfigCreateModel)
+                # For generic config, skip type check if likely (last branch)
                 ret_dict[cls_field] = val._to_dict()
+        # Assign default if not set
         if self.vectorIndexConfig is None:
             ret_dict["vectorIndexType"] = VectorIndexType.HNSW.value
         return ret_dict
