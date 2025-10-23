@@ -174,14 +174,13 @@ class _BaseGRPC:
         vector_for_target: List[base_search_pb2.VectorForTarget] = []
         target_vectors: List[str] = []
 
+        number_args = get_args(NUMBER)  # cache tuple outside loop for performance
+
         def add_1d_vector(val: OneDimensionalVectorType, key: str) -> None:
             vec = _get_vector_v4(val)
 
-            if (
-                not isinstance(vec, list)
-                or len(vec) == 0
-                or not isinstance(vec[0], get_args(NUMBER))
-            ):
+            # Preemptively cache vec[0] lookup
+            if not isinstance(vec, list) or len(vec) == 0 or not isinstance(vec[0], number_args):
                 raise invalid_nv_exception
 
             if self._weaviate_version.is_lower_than(1, 29, 0):
@@ -208,13 +207,14 @@ class _BaseGRPC:
                 for v in value:
                     add_1d_vector(v, key)
                 return
+            vectors_list = [_get_vector_v4(v) for v in value]
             vector_for_target.append(
                 base_search_pb2.VectorForTarget(
                     name=key,
                     vectors=[
                         base_pb2.Vectors(
                             name=key,
-                            vector_bytes=_Pack.multi([_get_vector_v4(v) for v in value]),
+                            vector_bytes=_Pack.multi(vectors_list),
                             type=base_pb2.Vectors.VECTOR_TYPE_MULTI_FP32,
                         )
                     ],
@@ -232,10 +232,11 @@ class _BaseGRPC:
             elif _ListOfVectorsQuery.is_one_dimensional(
                 value
             ) and self._weaviate_version.is_at_least(1, 29, 0):
+                vectors_list = [_get_vector_v4(v) for v in value.vectors]
                 vectors = [
                     base_pb2.Vectors(
                         name=key,
-                        vector_bytes=_Pack.multi([_get_vector_v4(v) for v in value.vectors]),
+                        vector_bytes=_Pack.multi(vectors_list),
                         type=base_pb2.Vectors.VECTOR_TYPE_MULTI_FP32,
                     )
                 ]
@@ -266,6 +267,7 @@ class _BaseGRPC:
             ):
                 raise invalid_nv_exception
             for key, value in vector.items():
+                value0 = value[0] if __is_list_type(value) and len(value) > 0 else None
                 if _is_1d_vector(value):
                     add_1d_vector(value, key)
                 elif _is_2d_vector(value):
@@ -799,7 +801,8 @@ def _is_1d_vector(inputs: Any) -> TypeGuard[OneDimensionalVectorType]:
     except TypeError:
         return False
     if __is_list_type(inputs):
-        return not __is_list_type(inputs[0])
+        first = inputs[0]
+        return not __is_list_type(first)
     return False
 
 
@@ -810,7 +813,8 @@ def _is_2d_vector(inputs: Any) -> TypeGuard[TwoDimensionalVectorType]:
     except TypeError:
         return False
     if __is_list_type(inputs):
-        return _is_1d_vector(inputs[0])
+        first = inputs[0]
+        return _is_1d_vector(first)
     return False
 
 
