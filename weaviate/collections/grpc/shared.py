@@ -45,6 +45,14 @@ from weaviate.validator import (
     _ValidateArgument,
 )
 
+_VALID_LIST_TYPES = [
+    list,
+    _ExtraTypes.TF,
+    _ExtraTypes.PANDAS,
+    _ExtraTypes.NUMPY,
+    _ExtraTypes.POLARS,
+]
+
 UINT32_LEN = 4
 UINT64_LEN = 8
 
@@ -821,13 +829,5 @@ def __is_list_type(inputs: Any) -> bool:
     except TypeError:
         return False
 
-    return any(
-        _is_valid(types, inputs)
-        for types in [
-            List,
-            _ExtraTypes.TF,
-            _ExtraTypes.PANDAS,
-            _ExtraTypes.NUMPY,
-            _ExtraTypes.POLARS,
-        ]
-    )
+    # Avoid recreating the types list every call
+    return any(_is_valid(types, inputs) for types in _VALID_LIST_TYPES)

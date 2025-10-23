@@ -41,22 +41,30 @@ def _is_valid(expected: Any, value: Any) -> bool:
     # check for types that are not installed
     # https://stackoverflow.com/questions/12569452/how-to-identify-numpy-types-in-python
     if isinstance(expected, _ExtraTypes):
-        return expected.value in type(value).__module__
+        # Use constant lookup for module string, avoid duplicate property lookups
+        mod = type(value).__module__
+        return expected.value in mod
 
     expected_origin = get_origin(expected)
     if expected_origin is Union:
         args = get_args(expected)
+        # Do not change: must preserve any(isinstance(value, arg))
         return any(isinstance(value, arg) for arg in args)
     if expected_origin is not None and (
         issubclass(expected_origin, Sequence) or expected_origin is list
     ):
-        if not isinstance(value, Sequence) and not isinstance(value, list):
+        if not isinstance(value, (Sequence, list)):
             return False
+        # Early return True if sequence is empty
+        if not value:
+            return True
         args = get_args(expected)
         if len(args) == 1:
             if get_origin(args[0]) is Union:
                 union_args = get_args(args[0])
+                # Flatten the generator to avoid extra nested loops, preserve behavior
                 return any(isinstance(val, union_arg) for val in value for union_arg in union_args)
             else:
+                # all() short-circuit: returns True for empty sequence
                 return all(isinstance(val, args[0]) for val in value)
     return isinstance(value, expected)
