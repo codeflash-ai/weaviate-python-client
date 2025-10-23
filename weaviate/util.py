@@ -1,5 +1,3 @@
-"""Helper functions."""
-
 import base64
 import datetime
 import io
@@ -13,6 +11,9 @@ from urllib.parse import quote
 
 import httpx
 import validators
+from line_profiler import profile as codeflash_line_profile
+
+codeflash_line_profile.enable(output_prefix="/tmp/codeflash_nhqxh9uc/baseline_lprof")
 
 from weaviate.exceptions import (
     ResponseCannotBeDecodedError,
@@ -23,6 +24,11 @@ from weaviate.exceptions import (
 )
 from weaviate.types import BLOB_INPUT, NUMBER, TIME, UUIDS
 from weaviate.warnings import _Warnings
+
+"""Helper functions."""
+
+
+_pattern = re.compile(r"v?(\d+)\.(\d+)")
 
 PYPI_PACKAGE_URL = "https://pypi.org/pypi/weaviate-client/json"
 MAXIMUM_MINOR_VERSION_DELTA = 3  # The maximum delta between minor versions of Weaviate Client that will not trigger an upgrade warning.
@@ -484,6 +490,7 @@ def _sanitize_str(value: str) -> str:
     return f'"{value}"'
 
 
+@codeflash_line_profile
 def parse_version_string(ver_str: str) -> tuple:
     """Parse a version string into a float.
 
@@ -493,15 +500,14 @@ def parse_version_string(ver_str: str) -> tuple:
     Returns:
         The parsed version as a tuple with len(2). (e.g. (1, 18)) Note: Ignores the patch version.
     """
-    if ver_str.count(".") == 0:
+    if "." not in ver_str:
         ver_str = ver_str + ".0"
 
-    pattern = r"v?(\d+)\.(\d+)"
-    match = re.match(pattern, ver_str)
+    match = _pattern.match(ver_str)
 
     if match:
-        ver_tup = tuple(map(int, match.groups()))
-        return ver_tup
+        g1, g2 = match.groups()
+        return (int(g1), int(g2))
     else:
         raise ValueError(
             f"Unable to parse a version from the input string: {ver_str}. Is it in the format '(v)x.y.z' (e.g. 'v1.18.2' or '1.18.0')?"
@@ -639,12 +645,10 @@ def _get_valid_timeout_config(
         ValueError: If 'timeout_config' is/contains negative number/s.
     """
 
-    def check_number(num: Union[NUMBER, Tuple[NUMBER, NUMBER], None]) -> bool:
-        return isinstance(num, float) or isinstance(num, int)
+    # Faster isinstance checks by common tuple
+    _num_types = (float, int)
 
-    if (isinstance(timeout_config, float) or isinstance(timeout_config, int)) and not isinstance(
-        timeout_config, bool
-    ):
+    if isinstance(timeout_config, _num_types) and not isinstance(timeout_config, bool):
         assert timeout_config is not None
         if timeout_config <= 0.0:
             raise ValueError("'timeout_config' cannot be non-positive number/s!")
@@ -654,11 +658,13 @@ def _get_valid_timeout_config(
         raise TypeError("'timeout_config' should be a (or tuple of) positive number/s!")
     if len(timeout_config) != 2:
         raise ValueError("'timeout_config' must be of length 2!")
-    if not (check_number(timeout_config[0]) and check_number(timeout_config[1])) or (
-        isinstance(timeout_config[0], bool) and isinstance(timeout_config[1], bool)
+    a, b = timeout_config
+    # Combine all checks into a single branch for minimal calls
+    if not (isinstance(a, _num_types) and isinstance(b, _num_types)) or (
+        isinstance(a, bool) and isinstance(b, bool)
     ):
         raise TypeError("'timeout_config' must be tuple of numbers")
-    if timeout_config[0] <= 0.0 or timeout_config[1] <= 0.0:
+    if a <= 0.0 or b <= 0.0:
         raise ValueError("'timeout_config' cannot be non-positive number/s!")
     return timeout_config
 
