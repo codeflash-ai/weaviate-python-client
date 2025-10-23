@@ -381,14 +381,21 @@ class _NamedVectors:
                 Docker users may need to specify an alias, such as `http://host.docker.internal:11434` so that the container can access the host machine.
 
         """
-        return _NamedVectorConfigCreate(
+        # Local variable assignment for faster access and potential C optimizations
+        VecConfig = _Text2VecOllamaConfig
+        NamedVecConfigCreate = _NamedVectorConfigCreate
+
+        vectorizer_config = VecConfig(
+            apiEndpoint=api_endpoint,
+            model=model,
+            vectorizeClassName=vectorize_collection_name,
+        )
+
+        # Re-arranged to reduce attribute lookup
+        return NamedVecConfigCreate(
             name=name,
             source_properties=source_properties,
-            vectorizer=_Text2VecOllamaConfig(
-                apiEndpoint=api_endpoint,
-                model=model,
-                vectorizeClassName=vectorize_collection_name,
-            ),
+            vectorizer=vectorizer_config,
             vector_index_config=vector_index_config,
         )
 
