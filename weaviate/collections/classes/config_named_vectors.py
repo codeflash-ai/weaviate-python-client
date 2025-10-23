@@ -66,6 +66,8 @@ from weaviate.collections.classes.config_vectorizers import (
 
 from ...warnings import _Warnings
 
+_PRECREATED_NONE_VECTORIZER_CONFIG = _VectorizerConfigCreate(vectorizer=Vectorizers.NONE)
+
 
 class _NamedVectorConfigCreate(_ConfigCreateModel):
     name: str
@@ -110,7 +112,7 @@ class _NamedVectors:
         """
         return _NamedVectorConfigCreate(
             name=name,
-            vectorizer=_VectorizerConfigCreate(vectorizer=Vectorizers.NONE),
+            vectorizer=_PRECREATED_NONE_VECTORIZER_CONFIG,
             vector_index_config=vector_index_config,
         )
 
