@@ -461,12 +461,19 @@ def _properties_from_config(schema: Dict[str, Any]) -> List[_Property]:
 
 
 def _references_from_config(schema: Dict[str, Any]) -> List[_ReferenceProperty]:
-    return [
-        _ReferenceProperty(
-            target_collections=prop["dataType"],
-            description=prop.get("description"),
-            name=prop["name"],
-        )
-        for prop in schema["properties"]
-        if not _is_primitive(prop["dataType"])
-    ]
+    # Localize for perf: avoid repeated lookup and attribute access
+    properties = schema["properties"]
+    refs: List[_ReferenceProperty] = []
+    append = refs.append
+    for prop in properties:
+        data_type = prop["dataType"]
+        # Inline _is_primitive logic to avoid function call overhead
+        if not ("a" <= data_type[0][0] <= "z"):
+            append(
+                _ReferenceProperty(
+                    target_collections=data_type,
+                    description=prop.get("description"),
+                    name=prop["name"],
+                )
+            )
+    return refs
