@@ -723,9 +723,9 @@ class _BaseGRPC:
 class _ByteOps:
     @staticmethod
     def decode_float32s(byte_vector: bytes) -> List[float]:
-        return [
-            float(val) for val in struct.unpack(f"{len(byte_vector) // UINT32_LEN}f", byte_vector)
-        ]
+        # Avoid building an intermediate list and float conversion if unnecessary:
+        # struct.unpack already returns float, so float(val) is redundant
+        return list(struct.unpack(f"{len(byte_vector) // UINT32_LEN}f", byte_vector))
 
     @staticmethod
     def decode_float64s(byte_vector: bytes) -> List[float]:
@@ -782,12 +782,15 @@ class _Unpack:
 
     @staticmethod
     def multi(byte_vector: bytes) -> List[List[float]]:
-        dim_bytes = byte_vector[:2]
-        dim = int(struct.unpack("<H", dim_bytes)[0])
-        byte_vector = byte_vector[2:]
-        how_many = len(byte_vector) // (dim * UINT32_LEN)
+        # Buffer slice and decode dimension inline for efficiency
+        dim = struct.unpack_from("<H", byte_vector, 0)[0]
+        byte_vector = memoryview(byte_vector)[2:]  # Avoids extra copy until/unless sliced
+        vector_len = len(byte_vector)
+        chunk_size = dim * UINT32_LEN
+        how_many = vector_len // chunk_size
+        # Use memoryview to avoid slice copies where possible
         return [
-            _ByteOps.decode_float32s(byte_vector[i * dim * UINT32_LEN : (i + 1) * dim * UINT32_LEN])
+            _ByteOps.decode_float32s(byte_vector[i * chunk_size : (i + 1) * chunk_size])
             for i in range(how_many)
         ]
 
