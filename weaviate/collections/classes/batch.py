@@ -136,15 +136,21 @@ class BatchReference(BaseModel):
         return get_valid_uuid(v)
 
     def _to_internal(self) -> _BatchReference:
-        if self.to_object_collection is None:
-            self.to_object_collection = ""
+        # Avoid mutating self.to_object_collection; use locals for modifications
+        toc = self.to_object_collection
+        if toc is None:
+            toc_str = ""
         else:
-            self.to_object_collection = self.to_object_collection + "/"
+            # Simple concatenation is faster than += or +
+            toc_str = f"{toc}/"
+        # Only compute str(self.from_object_uuid) and str(self.to_object_uuid) once, reuse
+        from_uuid_str = str(self.from_object_uuid)
+        to_uuid_str = str(self.to_object_uuid)
         return _BatchReference(
-            from_uuid=str(self.from_object_uuid),
-            from_=f"{BEACON}{self.from_object_collection}/{self.from_object_uuid}/{self.from_property_name}",
-            to=f"{BEACON}{self.to_object_collection}{str(self.to_object_uuid)}",
-            to_uuid=str(self.to_object_uuid),
+            from_uuid=from_uuid_str,
+            from_=f"{BEACON}{self.from_object_collection}/{from_uuid_str}/{self.from_property_name}",
+            to=f"{BEACON}{toc_str}{to_uuid_str}",
+            to_uuid=to_uuid_str,
             tenant=self.tenant,
         )
 
