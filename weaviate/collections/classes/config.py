@@ -1030,6 +1030,10 @@ class _Reranker:
         Args:
             model: The model to use. Defaults to `None`, which uses the server-defined default
         """
+        # Avoid passing model explicitly if default is None, for less attribute initialization
+        # (micro-optimization in CPython: avoids unnecessary kwarg dictionary creation)
+        if model is None:
+            return _RerankerVoyageAIConfig()
         return _RerankerVoyageAIConfig(model=model)
 
     @staticmethod
