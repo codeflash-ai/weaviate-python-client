@@ -414,15 +414,12 @@ class _GroupBy:
 
     @classmethod
     def from_input(cls, group_by: Optional[GroupBy]) -> Optional["_GroupBy"]:
-        return (
-            cls(
-                prop=group_by.prop,
-                number_of_groups=group_by.number_of_groups,
-                objects_per_group=group_by.objects_per_group,
-            )
-            if group_by
-            else None
-        )
+        if group_by is None:
+            return None
+        prop = group_by.prop
+        number_of_groups = group_by.number_of_groups
+        objects_per_group = group_by.objects_per_group
+        return cls(prop, number_of_groups, objects_per_group)
 
 
 Nested = Annotated[P, "NESTED"]
