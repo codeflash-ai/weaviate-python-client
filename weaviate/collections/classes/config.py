@@ -1016,6 +1016,10 @@ class _Reranker:
         Args:
             model: The model to use. Defaults to `None`, which uses the server-defined default
         """
+        # Micro-optimization: Move default argument value out of function (None is already immutable)
+        # Fast path for default: avoid keyword initialization if model is None
+        if model is None:
+            return _RerankerJinaAIConfig()
         return _RerankerJinaAIConfig(model=model)
 
     @staticmethod
