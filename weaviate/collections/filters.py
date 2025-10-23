@@ -1,5 +1,5 @@
 import uuid as uuid_lib
-from typing import Any, Dict, List, Literal, Optional, cast, overload
+from typing import Any, Dict, List, Literal, Optional, cast
 
 from weaviate.collections.classes.filters import (
     FilterValues,
@@ -21,19 +21,29 @@ from weaviate.util import _datetime_to_string
 
 
 class _FilterToGRPC:
-    @overload
     @staticmethod
-    def convert(weav_filter: Literal[None]) -> None: ...
+    def convert(weav_filter: Literal[None]) -> None:
+        if weav_filter is None:
+            return None
+        elif type(weav_filter) is _FilterValue:
+            return _FilterToGRPC.__value_filter(weav_filter)
+        else:
+            return _FilterToGRPC.__and_or_not_filter(weav_filter)
 
-    @overload
     @staticmethod
-    def convert(weav_filter: _Filters) -> base_pb2.Filters: ...
+    def convert(weav_filter: _Filters) -> base_pb2.Filters:
+        if weav_filter is None:
+            return None
+        elif type(weav_filter) is _FilterValue:
+            return _FilterToGRPC.__value_filter(weav_filter)
+        else:
+            return _FilterToGRPC.__and_or_not_filter(weav_filter)
 
     @staticmethod
     def convert(weav_filter: Optional[_Filters]) -> Optional[base_pb2.Filters]:
         if weav_filter is None:
             return None
-        elif isinstance(weav_filter, _FilterValue):
+        elif type(weav_filter) is _FilterValue:
             return _FilterToGRPC.__value_filter(weav_filter)
         else:
             return _FilterToGRPC.__and_or_not_filter(weav_filter)
