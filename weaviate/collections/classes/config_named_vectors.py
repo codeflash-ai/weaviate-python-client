@@ -466,16 +466,18 @@ class _NamedVectors:
             vector_index_config: The configuration for Weaviate's vector index. Use wvc.config.Configure.VectorIndex to create a vector index configuration. None by default
             vectorize_collection_name: Whether to vectorize the collection name. Defaults to `True`.
         """
+        # Inline local assignments and avoid unnecessary temporary objects for direct construction
+        vectorizer = _Text2VecAWSConfig(
+            model=model,
+            endpoint=endpoint,
+            region=region,
+            service=service,
+            vectorizeClassName=vectorize_collection_name,
+        )
         return _NamedVectorConfigCreate(
             name=name,
             source_properties=source_properties,
-            vectorizer=_Text2VecAWSConfig(
-                model=model,
-                endpoint=endpoint,
-                region=region,
-                service=service,
-                vectorizeClassName=vectorize_collection_name,
-            ),
+            vectorizer=vectorizer,
             vector_index_config=vector_index_config,
         )
 
