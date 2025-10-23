@@ -735,9 +735,7 @@ class _ByteOps:
 
     @staticmethod
     def decode_int64s(byte_vector: bytes) -> List[int]:
-        return [
-            int(val) for val in struct.unpack(f"{len(byte_vector) // UINT64_LEN}q", byte_vector)
-        ]
+        return list(struct.unpack(f"{len(byte_vector) // UINT64_LEN}q", byte_vector))
 
 
 @dataclass
