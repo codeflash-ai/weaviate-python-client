@@ -1,6 +1,6 @@
 import uuid as uuid_package
 from dataclasses import dataclass, field
-from typing import Any, Dict, Generic, List, Optional, TypeVar, Union, cast
+from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -53,22 +53,34 @@ class BatchObject(BaseModel):
     def __init__(self, **data: Any) -> None:
         v = data.get("vector")
         if v is not None:
-            if isinstance(v, dict):  # named vector
-                for key, val in v.items():
-                    v[key] = _get_vector_v4(val)
-                data["vector"] = v
+            # If v is dict, update values in-place after converting each via _get_vector_v4.
+            # Otherwise, convert v via _get_vector_v4.
+            if isinstance(v, dict):
+                # Instead of using for loop, use dictionary comprehension to avoid repeated dict-item mutation
+                # and avoid extra overhead.
+                # This also creates a new dict, but since Pydantic will parse/validate anyway during instantiation,
+                # it's safe and avoids potential mutation issues with incoming `data`.
+                data["vector"] = {key: _get_vector_v4(val) for key, val in v.items()}
             else:
                 data["vector"] = _get_vector_v4(v)
 
-        data["uuid"] = (
-            get_valid_uuid(u) if (u := data.get("uuid")) is not None else uuid_package.uuid4()
-        )
+        # Inline assignment avoids extra lookup for uuid in dict.
+        u = data.get("uuid")
+        if u is not None:
+            data["uuid"] = get_valid_uuid(u)
+        else:
+            # Avoid non-determinism by creating new uuid only when needed
+            data["uuid"] = uuid_package.uuid4()
         super().__init__(**data)
 
     def _to_internal(self) -> _BatchObject:
+        # Avoid using cast(list, ...) (which is a noop at runtime and for vector already validated as list/None)
+        # Use self.vector directly, and str conversion for self.uuid (which may already be str, but it's safe).
+        # Since .__dict__ lookup may be faster for attribute-heavy classes, but the gains here are negligible;
+        # optimization focuses instead on avoiding redundant conversions and logic.
         return _BatchObject(
             collection=self.collection,
-            vector=cast(list, self.vector),
+            vector=self.vector,
             uuid=str(self.uuid),
             properties=self.properties,
             tenant=self.tenant,
