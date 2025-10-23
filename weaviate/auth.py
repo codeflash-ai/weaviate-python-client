@@ -97,7 +97,7 @@ class Auth:
     def client_password(
         username: str, password: str, scope: Optional[SCOPES] = None
     ) -> _ClientPassword:
-        return _ClientPassword(username=username, password=password, scope=scope)
+        return _ClientPassword(username, password, scope)
 
     @staticmethod
     def bearer_token(
