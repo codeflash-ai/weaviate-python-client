@@ -44,6 +44,7 @@ from weaviate.validator import (
     _validate_input,
     _ValidateArgument,
 )
+from itertools import chain
 
 UINT32_LEN = 4
 UINT64_LEN = 8
@@ -769,10 +770,8 @@ class _Pack:
 
     @staticmethod
     def multi(vector: TwoDimensionalVectorType) -> bytes:
-        vector_list = [item for sublist in vector for item in sublist]
-        return struct.pack("<H", len(vector[0])) + struct.pack(
-            "{}f".format(len(vector_list)), *vector_list
-        )
+        vector_list = tuple(chain.from_iterable(vector))
+        return struct.pack(f"<H{len(vector_list)}f", len(vector[0]), *vector_list)
 
 
 class _Unpack:
