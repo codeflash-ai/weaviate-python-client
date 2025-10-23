@@ -1,4 +1,4 @@
-from typing import Any, Dict, Union, cast
+from typing import Any, Dict, Union
 
 from pydantic import BaseModel
 
@@ -7,7 +7,7 @@ class _BackupLocationConfig(BaseModel):
     """The dynamic location of a backup."""
 
     def _to_dict(self) -> Dict[str, Any]:
-        ret = cast(dict, self.model_dump(exclude_none=True))
+        ret = {k: v for k, v in self.__dict__.items() if v is not None}
 
         return ret
 
