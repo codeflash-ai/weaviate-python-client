@@ -52,10 +52,19 @@ class _BaseExecutor(Generic[ConnectionType]):
         self,
         user_id: str,
     ) -> executor.Result[Union[Dict[str, Role], Dict[str, RoleBase]]]:
+        # Avoid repeated function/local lookup and attribute lookups in loop
+        # Avoid dict/list intermediate allocations within listcomp
         path = f"/authz/users/{escape_string(user_id)}/roles"
 
         def resp(res: Response) -> Union[Dict[str, Role], Dict[str, RoleBase]]:
-            return {role["name"]: Role._from_weaviate_role(role) for role in res.json()}
+            roles = res.json()
+            result: Dict[str, Role] = {}
+            # Minor local lookup optimization
+            _from_weaviate_role = Role._from_weaviate_role
+            for role in roles:
+                name = role["name"]
+                result[name] = _from_weaviate_role(role)
+            return result
 
         return executor.execute(
             response_callback=resp,
