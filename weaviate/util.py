@@ -1,5 +1,3 @@
-"""Helper functions."""
-
 import base64
 import datetime
 import io
@@ -13,6 +11,9 @@ from urllib.parse import quote
 
 import httpx
 import validators
+from line_profiler import profile as codeflash_line_profile
+
+codeflash_line_profile.enable(output_prefix="/tmp/codeflash_nhqxh9uc/baseline_lprof")
 
 from weaviate.exceptions import (
     ResponseCannotBeDecodedError,
@@ -23,6 +24,11 @@ from weaviate.exceptions import (
 )
 from weaviate.types import BLOB_INPUT, NUMBER, TIME, UUIDS
 from weaviate.warnings import _Warnings
+
+"""Helper functions."""
+
+
+_pattern = re.compile(r"v?(\d+)\.(\d+)")
 
 PYPI_PACKAGE_URL = "https://pypi.org/pypi/weaviate-client/json"
 MAXIMUM_MINOR_VERSION_DELTA = 3  # The maximum delta between minor versions of Weaviate Client that will not trigger an upgrade warning.
@@ -299,12 +305,21 @@ def get_vector(vector: Sequence) -> Sequence[float]:
 
 
 def _get_vector_v4(vector: Any) -> Sequence[float]:
+    if isinstance(vector, list):
+        return vector
     try:
-        return get_vector(vector)
-    except TypeError as e:
-        raise WeaviateInvalidInputError(
-            f"The vector you supplied was malformatted! Vector:  {vector}"
-        ) from e
+        return vector.squeeze().tolist()  # type: ignore
+    except AttributeError:
+        pass
+    try:
+        return vector.numpy().squeeze().tolist()  # type: ignore
+    except AttributeError:
+        pass
+    try:
+        return vector.to_list()  # type: ignore
+    except AttributeError:
+        pass
+    raise WeaviateInvalidInputError(f"The vector you supplied was malformatted! Vector:  {vector}")
 
 
 def get_domain_from_weaviate_url(url: str) -> str:
@@ -484,6 +499,7 @@ def _sanitize_str(value: str) -> str:
     return f'"{value}"'
 
 
+@codeflash_line_profile
 def parse_version_string(ver_str: str) -> tuple:
     """Parse a version string into a float.
 
@@ -493,15 +509,14 @@ def parse_version_string(ver_str: str) -> tuple:
     Returns:
         The parsed version as a tuple with len(2). (e.g. (1, 18)) Note: Ignores the patch version.
     """
-    if ver_str.count(".") == 0:
+    if "." not in ver_str:
         ver_str = ver_str + ".0"
 
-    pattern = r"v?(\d+)\.(\d+)"
-    match = re.match(pattern, ver_str)
+    match = _pattern.match(ver_str)
 
     if match:
-        ver_tup = tuple(map(int, match.groups()))
-        return ver_tup
+        g1, g2 = match.groups()
+        return (int(g1), int(g2))
     else:
         raise ValueError(
             f"Unable to parse a version from the input string: {ver_str}. Is it in the format '(v)x.y.z' (e.g. 'v1.18.2' or '1.18.0')?"
