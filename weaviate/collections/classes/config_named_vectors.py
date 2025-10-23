@@ -247,14 +247,16 @@ class _NamedVectors:
         Raises:
             pydantic.ValidationError: If `model` is not a valid value from the `CohereMultimodalModel` type or if `truncate` is not a valid value from the `CohereTruncation` type.
         """
+        image_vec_fields = None if image_fields is None else _map_multi2vec_fields(image_fields)
+        text_vec_fields = None if text_fields is None else _map_multi2vec_fields(text_fields)
         return _NamedVectorConfigCreate(
             name=name,
             vectorizer=_Multi2VecCohereConfig(
                 baseURL=base_url,
                 model=model,
                 truncate=truncate,
-                imageFields=_map_multi2vec_fields(image_fields),
-                textFields=_map_multi2vec_fields(text_fields),
+                imageFields=image_vec_fields,
+                textFields=text_vec_fields,
             ),
             vector_index_config=vector_index_config,
         )
