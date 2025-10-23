@@ -36,10 +36,10 @@ class PhoneNumber(_PhoneNumberBase):
     default_country: Optional[str] = Field(default=None)
 
     def _to_dict(self) -> Mapping[str, str]:
-        out: Dict[str, str] = {"input": self.number}
-        if self.default_country is not None:
-            out["defaultCountry"] = self.default_country
-        return out
+        default_country = self.default_country
+        if default_country is None:
+            return {"input": self.number}
+        return {"input": self.number, "defaultCountry": default_country}
 
 
 class _PhoneNumber(_PhoneNumberBase):
