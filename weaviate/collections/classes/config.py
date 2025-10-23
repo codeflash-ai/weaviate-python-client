@@ -1933,9 +1933,15 @@ class _CollectionConfigCreate(_ConfigCreateModel):
         info: ValidationInfo,
     ) -> Union[_VectorizerConfigCreate, _NamedVectorConfigCreate, List[_NamedVectorConfigCreate]]:
         if isinstance(v, list):
-            names = [vc.name for vc in v]
-            if len(names) != len(set(names)):
-                dups = {name for name in names if names.count(name) > 1}
+            seen = set()
+            dups = set()
+            for vc in v:
+                name = vc.name
+                if name in seen:
+                    dups.add(name)
+                else:
+                    seen.add(name)
+            if dups:
                 raise ValueError(f"Vector config names must be unique. Found duplicates: {dups}")
         return v
 
