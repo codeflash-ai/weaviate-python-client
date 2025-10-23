@@ -33,7 +33,7 @@ def _flatten_permissions(
         if isinstance(permission, _Permission):
             flattened_permissions.append(permission)
         else:
-            flattened_permissions.extend(permission)
+            flattened_permissions += permission
     return flattened_permissions
 
 
