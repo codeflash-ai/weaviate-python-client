@@ -27,6 +27,10 @@ from weaviate.proto.v1 import base_pb2, batch_pb2
 from weaviate.types import VECTORS
 from weaviate.util import _datetime_to_string, _ServerVersion
 
+_UUID = uuid_package.UUID
+
+_DateTime = datetime.datetime
+
 
 class _BatchGRPC(_BaseGRPC):
     """This class is used to insert multiple objects into Weaviate using the gRPC API.
@@ -278,11 +282,11 @@ def _validate_props(props: Dict[str, Any]) -> None:
 
 
 def _serialize_primitive(value: Any) -> Any:
-    if isinstance(value, uuid_package.UUID):
+    if isinstance(value, _UUID):
         return str(value)
-    if isinstance(value, datetime.datetime):
+    if isinstance(value, _DateTime):
         return _datetime_to_string(value)
     if isinstance(value, list):
-        return [_serialize_primitive(val) for val in value]
+        return list(map(_serialize_primitive, value))
 
     return value
