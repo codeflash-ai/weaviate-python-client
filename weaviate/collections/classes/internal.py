@@ -76,17 +76,15 @@ class MetadataReturn:
     rerank_score: Optional[float] = None
 
     def _is_empty(self) -> bool:
-        return all(
-            [
-                self.creation_time is None,
-                self.last_update_time is None,
-                self.distance is None,
-                self.certainty is None,
-                self.score is None,
-                self.explain_score is None,
-                self.is_consistent is None,
-                self.rerank_score is None,
-            ]
+        return (
+            self.creation_time is None
+            and self.last_update_time is None
+            and self.distance is None
+            and self.certainty is None
+            and self.score is None
+            and self.explain_score is None
+            and self.is_consistent is None
+            and self.rerank_score is None
         )
 
 
