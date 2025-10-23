@@ -45,6 +45,14 @@ from weaviate.validator import (
     _ValidateArgument,
 )
 
+_LIST_TYPES = (
+    List,
+    _ExtraTypes.TF,
+    _ExtraTypes.PANDAS,
+    _ExtraTypes.NUMPY,
+    _ExtraTypes.POLARS,
+)
+
 UINT32_LEN = 4
 UINT64_LEN = 8
 
@@ -793,41 +801,49 @@ class _Unpack:
 
 
 def _is_1d_vector(inputs: Any) -> TypeGuard[OneDimensionalVectorType]:
+    # Fast path for common cases: check if input is a sequence with length > 0
     try:
-        if len(inputs) == 0:
+        # Short-circuit for empty input (also avoids inputs[0] KeyError/IndexError)
+        if not inputs or len(inputs) == 0:
             return False
     except TypeError:
         return False
+    # Check list-ness of the input, and non-list-ness of its first element
     if __is_list_type(inputs):
-        return not __is_list_type(inputs[0])
+        first = inputs[0]
+        # Optimize to avoid full test if first is not sequence-like at all
+        try:
+            # This is slightly faster than always calling __is_list_type (which itself calls len())
+            if not hasattr(first, "__len__"):
+                return True
+        except Exception:
+            # If first doesn't have __len__ or throws, defer to __is_list_type
+            pass
+        return not __is_list_type(first)
     return False
 
 
 def _is_2d_vector(inputs: Any) -> TypeGuard[TwoDimensionalVectorType]:
     try:
-        if len(inputs) == 0:
+        if not inputs or len(inputs) == 0:
             return False
     except TypeError:
         return False
     if __is_list_type(inputs):
+        # Avoid redundant checks by preprocessing as in _is_1d_vector
         return _is_1d_vector(inputs[0])
     return False
 
 
 def __is_list_type(inputs: Any) -> bool:
+    # Inline len(inputs) == 0 to avoid extra call when not needed
     try:
-        if len(inputs) == 0:
+        if not inputs or len(inputs) == 0:
             return False
     except TypeError:
         return False
-
-    return any(
-        _is_valid(types, inputs)
-        for types in [
-            List,
-            _ExtraTypes.TF,
-            _ExtraTypes.PANDAS,
-            _ExtraTypes.NUMPY,
-            _ExtraTypes.POLARS,
-        ]
-    )
+    # Use tuple for _LIST_TYPES, and a tight loop for speed
+    for types in _LIST_TYPES:
+        if _is_valid(types, inputs):
+            return True
+    return False
