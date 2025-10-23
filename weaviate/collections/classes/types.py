@@ -19,7 +19,7 @@ class GeoCoordinate(_WeaviateInput):
     longitude: float = Field(default=..., le=180, ge=-180)
 
     def _to_dict(self) -> Dict[str, float]:
-        return self.model_dump(exclude_none=True)
+        return {k: v for k, v in self.__dict__.items() if v is not None}
 
 
 class _PhoneNumberBase(_WeaviateInput):
