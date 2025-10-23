@@ -132,7 +132,10 @@ class _VectorIndexConfigFlatCreate(_VectorIndexConfigCreate):
 
     @staticmethod
     def vector_index_type() -> VectorIndexType:
-        return VectorIndexType.FLAT
+        # Use a cached class-level constant to avoid repeatedly looking up the class attribute
+        if not hasattr(_VectorIndexConfigFlatCreate, "_VECTOR_INDEX_TYPE_FLAT"):
+            _VectorIndexConfigFlatCreate._VECTOR_INDEX_TYPE_FLAT = VectorIndexType.FLAT
+        return _VectorIndexConfigFlatCreate._VECTOR_INDEX_TYPE_FLAT
 
 
 class _VectorIndexConfigHNSWUpdate(_VectorIndexConfigUpdate):
@@ -480,11 +483,7 @@ class _VectorIndex:
             multivector=None,
         )
 
-    @overload
     @staticmethod
-    @deprecated(
-        'Using the "multi_vector" argument is deprecated. Instead, specify it at the top-level in `multi_vector_index_config` when creating your `vector_config` with `MultiVectors.module()`'
-    )
     def hnsw(
         cleanup_interval_seconds: Optional[int] = None,
         distance_metric: Optional[VectorDistances] = None,
@@ -500,9 +499,32 @@ class _VectorIndex:
         *,
         quantizer: Optional[_QuantizerConfigCreate] = None,
         multi_vector: _MultiVectorConfigCreate,
-    ) -> _VectorIndexConfigHNSWCreate: ...
+    ) -> _VectorIndexConfigHNSWCreate:
+        """Create a `_VectorIndexConfigHNSWCreate` object to be used when defining the HNSW vector index configuration of Weaviate.
 
-    @overload
+        Use this method when defining the `vector_index_config` argument in `collections.create()`.
+
+        Args:
+            See [the docs](https://weaviate.io/developers/weaviate/configuration/indexes#how-to-configure-hnsw) for a more detailed view!
+        """  # noqa: D417 (missing argument descriptions in the docstring)
+        if multi_vector is not None:
+            _Warnings.multi_vector_in_hnsw_config()
+        return _VectorIndexConfigHNSWCreate(
+            cleanupIntervalSeconds=cleanup_interval_seconds,
+            distance=distance_metric,
+            dynamicEfMin=dynamic_ef_min,
+            dynamicEfMax=dynamic_ef_max,
+            dynamicEfFactor=dynamic_ef_factor,
+            efConstruction=ef_construction,
+            ef=ef,
+            filterStrategy=filter_strategy,
+            flatSearchCutoff=flat_search_cutoff,
+            maxConnections=max_connections,
+            vectorCacheMaxObjects=vector_cache_max_objects,
+            quantizer=quantizer,
+            multivector=multi_vector,
+        )
+
     @staticmethod
     def hnsw(
         cleanup_interval_seconds: Optional[int] = None,
@@ -518,7 +540,31 @@ class _VectorIndex:
         vector_cache_max_objects: Optional[int] = None,
         quantizer: Optional[_QuantizerConfigCreate] = None,
         multi_vector: Optional[_MultiVectorConfigCreate] = None,
-    ) -> _VectorIndexConfigHNSWCreate: ...
+    ) -> _VectorIndexConfigHNSWCreate:
+        """Create a `_VectorIndexConfigHNSWCreate` object to be used when defining the HNSW vector index configuration of Weaviate.
+
+        Use this method when defining the `vector_index_config` argument in `collections.create()`.
+
+        Args:
+            See [the docs](https://weaviate.io/developers/weaviate/configuration/indexes#how-to-configure-hnsw) for a more detailed view!
+        """  # noqa: D417 (missing argument descriptions in the docstring)
+        if multi_vector is not None:
+            _Warnings.multi_vector_in_hnsw_config()
+        return _VectorIndexConfigHNSWCreate(
+            cleanupIntervalSeconds=cleanup_interval_seconds,
+            distance=distance_metric,
+            dynamicEfMin=dynamic_ef_min,
+            dynamicEfMax=dynamic_ef_max,
+            dynamicEfFactor=dynamic_ef_factor,
+            efConstruction=ef_construction,
+            ef=ef,
+            filterStrategy=filter_strategy,
+            flatSearchCutoff=flat_search_cutoff,
+            maxConnections=max_connections,
+            vectorCacheMaxObjects=vector_cache_max_objects,
+            quantizer=quantizer,
+            multivector=multi_vector,
+        )
 
     @staticmethod
     def hnsw(
