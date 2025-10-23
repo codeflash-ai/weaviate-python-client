@@ -36,7 +36,10 @@ def __parse_weaviate_cloud_cluster_url(cluster_url: str) -> Tuple[str, str]:
 
 
 def __parse_auth_credentials(creds: Union[str, AuthCredentials, None]) -> Optional[AuthCredentials]:
-    if isinstance(creds, str):
+    if creds is None:
+        # If no credentials are provided, return None.
+        return None
+    elif isinstance(creds, str):
         # If the credentials are a string, assume it's an API key.
         return Auth.api_key(creds)
     elif isinstance(
@@ -44,9 +47,6 @@ def __parse_auth_credentials(creds: Union[str, AuthCredentials, None]) -> Option
     ):  # use AuthCredentials after python 3.9 has been removed
         # If the credentials are already an AuthCredentials object, return it as is.
         return creds
-    elif creds is None:
-        # If no credentials are provided, return None.
-        return None
     else:
         raise ValueError("Invalid auth credentials provided.")
 
