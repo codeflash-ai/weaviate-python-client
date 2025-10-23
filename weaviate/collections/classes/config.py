@@ -2118,7 +2118,8 @@ class Configure:
             auto_tenant_creation: Automatically create nonexistent tenants during object creation. Defaults to `None`, which uses the server-defined default.
             auto_tenant_activation: Automatically turn tenants implicitly HOT when they are accessed. Defaults to `None`, which uses the server-defined default.
         """
-        return _MultiTenancyConfigCreate(
+        ctor = _MultiTenancyConfigCreate
+        return ctor(
             enabled=enabled,
             autoTenantCreation=auto_tenant_creation,
             autoTenantActivation=auto_tenant_activation,
