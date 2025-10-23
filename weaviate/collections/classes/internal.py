@@ -3,6 +3,7 @@ import sys
 import uuid as uuid_package
 from dataclasses import dataclass, field
 from typing import (
+    Annotated as TypingAnnotated,
     Any,
     Dict,
     Generic,
@@ -16,7 +17,7 @@ from typing import (
     cast,
 )
 
-from typing_extensions import TypeAlias, deprecated
+from typing_extensions import Annotated as ExtAnnotated, TypeAlias, deprecated
 
 if sys.version_info < (3, 9):
     from typing_extensions import Annotated, get_args, get_origin, get_type_hints
@@ -582,11 +583,16 @@ def _extract_types_from_annotated_reference(
 
 
 def __is_annotated_reference(value: Any) -> bool:
-    return (
-        get_origin(value) is Annotated
-        and len(get_args(value)) == 2
-        and get_origin(get_args(value)[0]) is _CrossReference
-    )
+    # Inline local variables to avoid repeated lookups
+    origin = get_origin(value)
+    # Fastest check for Annotated: account for both builtin and backport
+    if origin is not TypingAnnotated and origin is not ExtAnnotated:
+        return False
+    args = get_args(value)
+    if len(args) != 2:
+        return False
+    inner_origin = get_origin(args[0])
+    return inner_origin is _CrossReference
 
 
 def __create_link_to_from_annotated_reference(
