@@ -219,18 +219,26 @@ class BatchObjectReturn:
         return self._all_responses
 
     def __add__(self, other: "BatchObjectReturn") -> "BatchObjectReturn":
-        self._all_responses += other._all_responses
+        # More efficient batch extension vs += for lists
+        self._all_responses.extend(other._all_responses)
 
+        # Efficient dict update already
         self.errors.update(other.errors)
         self.uuids.update(other.uuids)
         self.has_errors = self.has_errors or other.has_errors
 
-        if len(self.uuids) >= MAX_STORED_RESULTS:
-            old_max = max(self.uuids.keys())
-            old_min = min(self.uuids.keys())
-            for k in range(old_min, old_max - MAX_STORED_RESULTS + 1):
+        uuids_len = len(self.uuids)
+        if uuids_len >= MAX_STORED_RESULTS:
+            # Calculate keys to delete in a single operation. This avoids repeated dict deletions in O(N).
+            remove_count = uuids_len - MAX_STORED_RESULTS
+            # Keys are always equivalent to original_index, and we want the oldest.
+            # This is strict about ordering: get the lowest keys.
+            keys_to_delete = sorted(self.uuids.keys())[:remove_count]
+            for k in keys_to_delete:
                 del self.uuids[k]
-        if len(self._all_responses) > MAX_STORED_RESULTS:
+        responses_len = len(self._all_responses)
+        if responses_len > MAX_STORED_RESULTS:
+            # Efficient slicing - overwrite only if needed
             self._all_responses = self._all_responses[-MAX_STORED_RESULTS:]
 
         return self
