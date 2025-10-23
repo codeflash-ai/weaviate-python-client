@@ -132,7 +132,10 @@ class _VectorIndexConfigFlatCreate(_VectorIndexConfigCreate):
 
     @staticmethod
     def vector_index_type() -> VectorIndexType:
-        return VectorIndexType.FLAT
+        # Use a cached class-level constant to avoid repeatedly looking up the class attribute
+        if not hasattr(_VectorIndexConfigFlatCreate, "_VECTOR_INDEX_TYPE_FLAT"):
+            _VectorIndexConfigFlatCreate._VECTOR_INDEX_TYPE_FLAT = VectorIndexType.FLAT
+        return _VectorIndexConfigFlatCreate._VECTOR_INDEX_TYPE_FLAT
 
 
 class _VectorIndexConfigHNSWUpdate(_VectorIndexConfigUpdate):
@@ -595,7 +598,8 @@ class _VectorIndex:
         Args:
             See [the docs](https://weaviate.io/developers/weaviate/configuration/indexes#how-to-configure-hnsw) for a more detailed view!
         """  # noqa: D417 (missing argument descriptions in the docstring)
-        return _VectorIndexConfigDynamicCreate(
+        cls = _VectorIndexConfigDynamicCreate
+        return cls(
             distance=distance_metric,
             threshold=threshold,
             hnsw=hnsw,
